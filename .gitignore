@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local environment files
+.env
+.env.*
+
+# Downloaded clips, benchmark outputs, and weights.
+# Leading slash keeps src/latentcodecbench/data tracked.
+/data/
+/results/
+/checkpoints/
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.onnx
+
+# Notebook caches
+.ipynb_checkpoints/
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
