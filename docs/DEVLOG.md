@@ -32,3 +32,12 @@ A decoded clip now has a number next to it, and each number is checked against a
 - VMAF is ffmpeg libvmaf, distorted first, one thread, pooled mean. Identical textured clips score above 99. They do not score a bitwise 100: the model uses integer features. Ubuntu's ffmpeg has no libvmaf, so CI switched to a pinned static build. ADR-0003.
 - LPIPS is optional. Missing torch or lpips raises `MetricUnavailable`, and the score helper records `None`. CI does not install torch.
 - Temporal flicker is the mean absolute disagreement of frame-to-frame deltas. A constant brightness shift scores 0, because the deltas did not change. Optical-flow warping error would also catch motion that points the wrong way. That needs a flow model, so it is future work rather than a dependency of this baseline. ADR-0004.
+
+## 2026-10-07 — Phase 1.3, codec baselines
+
+x264, x265, and SVT-AV1 can now be run as a function instead of a shell one-liner, with the knobs written down.
+
+- Six CRF points each. x264 and x265 use 18, 23, 28, 33, 38, 43. SVT-AV1 uses 20, 28, 36, 44, 52, 60 because its dial runs to 63. The numbers are not a shared scale. ADR-0005.
+- Presets: x264 `medium`, x265 `medium`, SVT-AV1 preset 6. On `crowd_run` at one thread those were 0.7 s, 1.5 s, and 2.0 s. Preset 8 was faster and was not chosen. Tests use `ultrafast` so CI stays on a 64×64 clip.
+- One thread, and no `-tune psnr`. This ffmpeg's libsvtav1 defaults to a PSNR tune, so the wrapper sets `tune=0` (visual quality) explicitly.
+- Rate is the sum of video packet sizes. Bits per pixel divides by width × height × frames, so a 60 fps clip and a 24 fps clip share an x-axis. Decode time is a one-thread decode to null, not the time to write a reconstructed y4m.
