@@ -40,9 +40,21 @@ src/latentcodecbench/    importable package
 tests/                   pytest
 notebooks/               Colab drivers for GPU work
 docs/                    plan, devlog, ADRs, concept notes
+manifests/clips.yaml     source list: URL, license, geometry, SHA256
+DATA.md                  licenses and which sources are already compressed
 ```
 
-`/data/`, `/results/`, and `/checkpoints/` are gitignored.
+`/data/`, `/results/`, and `/checkpoints/` are gitignored. Video bytes never land in a commit.
+
+## Clip set
+
+The checked-in list is [manifests/clips.yaml](manifests/clips.yaml): 34 sources, each with a URL, a license, native resolution and frame rate, and a SHA256. Licenses, and which of those sources are already compressed, are written out in [DATA.md](DATA.md). The shape every later stage sees is 832×480, 33 frames, 8-bit 4:2:0 y4m. [ADR-0002](docs/decisions/0002-canonical-clips.md) records why.
+
+```bash
+uv run lcb data fetch
+```
+
+That command downloads each source, deletes a file whose SHA256 does not match, and writes `data/clips/{id}.y4m`. For the large Xiph derf files the digest covers a 33-frame byte range. For UVG and the camera clips it covers the whole file.
 
 ## Quickstart
 
