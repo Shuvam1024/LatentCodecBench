@@ -30,12 +30,14 @@ jobs:
         run: |
           sudo bash scripts/install-ffmpeg.sh /opt/ffmpeg
           echo "/opt/ffmpeg/bin" >> "$GITHUB_PATH"
-          ffmpeg -hide_banner -version
-          encoders="$(ffmpeg -hide_banner -encoders)"
+          # GITHUB_PATH applies to later steps, not to this one.
+          ffmpeg=/opt/ffmpeg/bin/ffmpeg
+          "$ffmpeg" -hide_banner -version
+          encoders="$("$ffmpeg" -hide_banner -encoders)"
           for name in libx264 libx265 libsvtav1; do
             echo "$encoders" | grep -q "$name" || { echo "missing encoder $name"; exit 1; }
           done
-          ffmpeg -hide_banner -filters | grep -q libvmaf || { echo "missing libvmaf"; exit 1; }
+          "$ffmpeg" -hide_banner -filters | grep -q libvmaf || { echo "missing libvmaf"; exit 1; }
 
       - name: Install p7zip
         run: |
