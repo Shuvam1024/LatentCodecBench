@@ -75,7 +75,7 @@ uv sync --extra gpu   # PyTorch
 uv sync --extra vae   # PyTorch, Diffusers, and the libraries that load the VAEs
 ```
 
-ffmpeg is required once codec baselines exist. CI installs it. Locally, install it from your system package manager.
+Metrics and codec baselines need an ffmpeg that includes libx264, libx265, libsvtav1, and libvmaf. Ubuntu's package has the three encoders and does not ship libvmaf, so CI installs the pinned build from [scripts/install-ffmpeg.sh](scripts/install-ffmpeg.sh). [ADR-0003](docs/decisions/0003-pinned-ffmpeg.md) records the version and the checksum.
 
 ## License
 

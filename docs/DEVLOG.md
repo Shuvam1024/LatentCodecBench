@@ -22,3 +22,13 @@ The benchmark needs one picture for every codec and every VAE. This change defin
 - `manifests/clips.yaml` has the URL, license, native geometry, and SHA256. `lcb data fetch` deletes a download that does not match. For the large derf y4m files the digest is of a 33-frame byte range, not of the whole multi-gigabyte object. `DATA.md` says so per clip.
 - Preprocess is lanczos, cover-then-center-crop, still in YUV. UVG arrives as a 7z; ffmpeg reads the member from a pipe and stops after 33 frames.
 - `data/` stays gitignored. CI installs `p7zip-full` next to ffmpeg so the 7z path is tested on a tiny archive, not on UVG.
+
+## 2026-10-07 — Phase 1.2, distortion metrics
+
+A decoded clip now has a number next to it, and each number is checked against a case that can be computed by hand or by another library.
+
+- PSNR pools one MSE over the whole clip, then takes the log. Averaging per-frame PSNR would hide a bad frame. Luma and RGB are both reported. RGB uses the BT.709 limited-range matrix, because the canonical y4m is studio-range YUV. A 2×2 plane with one sample off by 1 is the unit test: MSE 0.25, PSNR about 54.15 dB.
+- SSIM is Wang 2004 on luma: 11×11 Gaussian, sigma 1.5, the paper's C1 and C2. Flat fields have a closed form. A half-replaced frame is locked to the value scikit-image returns with the same window. scikit-image is not a dependency.
+- VMAF is ffmpeg libvmaf, distorted first, one thread, pooled mean. Identical textured clips score above 99. They do not score a bitwise 100: the model uses integer features. Ubuntu's ffmpeg has no libvmaf, so CI switched to a pinned static build. ADR-0003.
+- LPIPS is optional. Missing torch or lpips raises `MetricUnavailable`, and the score helper records `None`. CI does not install torch.
+- Temporal flicker is the mean absolute disagreement of frame-to-frame deltas. A constant brightness shift scores 0, because the deltas did not change. Optical-flow warping error would also catch motion that points the wrong way. That needs a flow model, so it is future work rather than a dependency of this baseline. ADR-0004.
