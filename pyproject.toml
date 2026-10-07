@@ -18,7 +18,10 @@ classifiers = [
     "Topic :: Multimedia :: Video",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
-dependencies = ["numpy>=2.1"]
+dependencies = [
+    "numpy>=2.1",
+    "pyyaml>=6.0",
+]
 
 [project.optional-dependencies]
 gpu = ["torch>=2.4"]
@@ -44,6 +47,7 @@ dev = [
     "pre-commit>=4.2",
     "pytest>=8.3",
     "ruff>=0.16.10",
+    "types-pyyaml>=6.0",
 ]
 
 [build-system]

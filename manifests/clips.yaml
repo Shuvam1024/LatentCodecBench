@@ -1,0 +1,445 @@
+# Clip manifest for LatentCodecBench.
+# SHA256 is of the bytes `lcb data fetch` downloads.
+# Derf entries set byte_length: that is a 33-frame prefix, not the whole file.
+# UVG entries are whole 7z archives. See DATA.md and docs/decisions/0002-canonical-clips.md.
+version: 1
+canonical:
+  width: 832
+  height: 480
+  num_frames: 33
+  pix_fmt: yuv420p
+clips:
+  - id: crowd_run
+    source_url: https://media.xiph.org/video/derf/y4m/crowd_run_1080p50.y4m
+    sha256: 136004e221eafe4cdd1bb5cdeb01c2ea07efbe824666d3339b4f949fb44b39e0
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 50
+    native_fps_den: 1
+    category: high-motion
+    note: People running through a park. High motion and fine texture.
+    byte_start: 0
+    byte_length: 102643434
+  - id: park_joy
+    source_url: https://media.xiph.org/video/derf/y4m/park_joy_1080p50.y4m
+    sha256: 4ff4e956ce85bc2082382deaa4bac0231dde2688eaa26e9eb3a67bc349ecd57b
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 50
+    native_fps_den: 1
+    category: high-motion
+    note: Camera moving quickly through trees and people.
+    byte_start: 0
+    byte_length: 102643434
+  - id: ducks_take_off
+    source_url: https://media.xiph.org/video/derf/y4m/ducks_take_off_1080p50.y4m
+    sha256: 324a3d1165cf0cbcb5cfbe278ee4de6a54feae413ea130604133953c0f4fe4de
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 50
+    native_fps_den: 1
+    category: water
+    note: Ducks leaving the water. Motion plus a reflective surface.
+    byte_start: 0
+    byte_length: 102643434
+  - id: in_to_tree
+    source_url: https://media.xiph.org/video/derf/y4m/in_to_tree_1080p50.y4m
+    sha256: 64e9cce8d4e86eb815402d0f8ddf1a034aeb044b2f507962adab48f004006d65
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 50
+    native_fps_den: 1
+    category: foliage
+    note: Camera push into tree foliage.
+    byte_start: 0
+    byte_length: 102643434
+  - id: old_town_cross
+    source_url: https://media.xiph.org/video/derf/y4m/old_town_cross_1080p50.y4m
+    sha256: 13c32b656818445727724976c56048c78471469b290c53b53b9cf55e0ac1c0f7
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 50
+    native_fps_den: 1
+    category: camera-pan
+    note: Pan across an old-town street and buildings.
+    byte_start: 0
+    byte_length: 102643434
+  - id: pedestrian_area
+    source_url: https://media.xiph.org/video/derf/y4m/pedestrian_area_1080p25.y4m
+    sha256: 2c745233a59336cd25b14df7332f02bd9d1ce4e788ebdb9d499122f1f007343a
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 25
+    native_fps_den: 1
+    category: people
+    note: Pedestrians in a plaza.
+    byte_start: 0
+    byte_length: 102643434
+  - id: riverbed
+    source_url: https://media.xiph.org/video/derf/y4m/riverbed_1080p25.y4m
+    sha256: be1f95dcd07c1dc0245c02537db1196d52e7b8fde56e1ff2361750628053b85d
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 25
+    native_fps_den: 1
+    category: water
+    note: "Water over rocks. High spatial detail, modest motion."
+    byte_start: 0
+    byte_length: 102643434
+  - id: rush_hour
+    source_url: https://media.xiph.org/video/derf/y4m/rush_hour_1080p25.y4m
+    sha256: 92173f7e8183d79da63a8e615cc7638c6a1910db1f6e1c9bf1a6474c2122235d
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 25
+    native_fps_den: 1
+    category: traffic
+    note: Dense traffic.
+    byte_start: 0
+    byte_length: 102643434
+  - id: sunflower
+    source_url: https://media.xiph.org/video/derf/y4m/sunflower_1080p25.y4m
+    sha256: a0e8e869a4653909903ab7d19b283c59fa325c0af6fa1fb0e113c33075c61f18
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 25
+    native_fps_den: 1
+    category: fine-detail
+    note: "A bee on a sunflower. Fine detail, little global motion."
+    byte_start: 0
+    byte_length: 102643434
+  - id: tractor
+    source_url: https://media.xiph.org/video/derf/y4m/tractor_1080p25.y4m
+    sha256: d61d507352f4eb250c741874d03357b34a3c6b1ba414841e19d69310666a957e
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 25
+    native_fps_den: 1
+    category: camera-motion
+    note: A tractor crossing a field.
+    byte_start: 0
+    byte_length: 102643434
+  - id: blue_sky
+    source_url: https://media.xiph.org/video/derf/y4m/blue_sky_1080p25.y4m
+    sha256: e31b44d2c85a0dee86eaed7b35d66160aabbfb4dd0e17024cf593188e30cb723
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 25
+    native_fps_den: 1
+    category: sky
+    note: Tree canopy against blue sky.
+    byte_start: 0
+    byte_length: 102643434
+  - id: station2
+    source_url: https://media.xiph.org/video/derf/y4m/station2_1080p25.y4m
+    sha256: a7f13174ce60be6bddbfb5607a813e5042923e5057f0ea3e541b805c737f5f0c
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 25
+    native_fps_den: 1
+    category: urban
+    note: A train station platform.
+    byte_start: 0
+    byte_length: 102643434
+  - id: touchdown_pass
+    source_url: https://media.xiph.org/video/derf/y4m/touchdown_pass_1080p.y4m
+    sha256: 1053e69f56585e75815f151c1012c765b9608e02868e1f9055acbf80518c0b94
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: sports
+    note: An American-football pass.
+    byte_start: 0
+    byte_length: 136857845
+  - id: speed_bag
+    source_url: https://media.xiph.org/video/derf/y4m/speed_bag_1080p.y4m
+    sha256: 2e8c39666bfdfdb1294014ff339e9b7e426c798372f6a6c0a48fc5e84f95c605
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: periodic-motion
+    note: A speed bag. Fast periodic motion.
+    byte_start: 0
+    byte_length: 136857845
+  - id: controlled_burn
+    source_url: https://media.xiph.org/video/derf/y4m/controlled_burn_1080p.y4m
+    sha256: e917686e256c83bd4332d850fa500845e842c077bc6f52be599c45e50c5fad52
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: smoke
+    note: Smoke from a controlled burn.
+    byte_start: 0
+    byte_length: 136857845
+  - id: red_kayak
+    source_url: https://media.xiph.org/video/derf/y4m/red_kayak_1080p.y4m
+    sha256: f3471203db6324d7b13132b0aa6152957531ab1e4b284ab02fc527284f5e4aaf
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: water-sports
+    note: A kayak on the water.
+    byte_start: 0
+    byte_length: 136857845
+  - id: dinner
+    source_url: https://media.xiph.org/video/derf/y4m/dinner_1080p30.y4m
+    sha256: 8f9ee5d05828d23e29738600b1c8aa5d05e556060a36cb77bada8d67ca6c8f22
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30
+    native_fps_den: 1
+    category: indoor
+    note: People at a dinner table.
+    byte_start: 0
+    byte_length: 102643434
+  - id: factory
+    source_url: https://media.xiph.org/video/derf/y4m/factory_1080p30.y4m
+    sha256: b26e13c76b3771ff2ec86b31b725c8e91a1a9bd208c1064be3653e95ec4ad761
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30
+    native_fps_den: 1
+    category: industrial
+    note: Factory floor.
+    byte_start: 0
+    byte_length: 102643434
+  - id: aspen
+    source_url: https://media.xiph.org/video/derf/y4m/aspen_1080p.y4m
+    sha256: 9f08fb02c7936ae9b9b310f798951e0504c7960ffcd0ac8d13613d7e4c78dcbd
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: wind
+    note: Aspen trees in the wind.
+    byte_start: 0
+    byte_length: 136857845
+  - id: snow_mnt
+    source_url: https://media.xiph.org/video/derf/y4m/snow_mnt_1080p.y4m
+    sha256: 00bfff4509b3733bbf57c1683c86a3560296e86ef6ad5076161bf53b556a1239
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: landscape
+    note: A snowy mountain.
+    byte_start: 0
+    byte_length: 136857845
+  - id: west_wind_easy
+    source_url: https://media.xiph.org/video/derf/y4m/west_wind_easy_1080p.y4m
+    sha256: da636650dca6a3dc5ccf0f5c63fc6689395128d17a17eab0228f5907323b0e6b
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: wind
+    note: Grass and trees in a light wind.
+    byte_start: 0
+    byte_length: 136857845
+  - id: rush_field_cuts
+    source_url: https://media.xiph.org/video/derf/y4m/rush_field_cuts_1080p.y4m
+    sha256: 0777cec784f9c0f6e285e5cdcafbcd2522e61786218a8958d31872daabb98e09
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: scene-cuts
+    note: A sports sequence with scene cuts.
+    byte_start: 0
+    byte_length: 136857845
+  - id: life
+    source_url: https://media.xiph.org/video/derf/y4m/life_1080p30.y4m
+    sha256: 4edff65ec41bdb04dca6d55bdd3a0d0eed5031a3962f85e49e3ab7a0ff876193
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 30
+    native_fps_den: 1
+    category: nature
+    note: Nature footage.
+    byte_start: 0
+    byte_length: 102643434
+  - id: four_people
+    source_url: https://media.xiph.org/video/derf/y4m/FourPeople_1280x720_60.y4m
+    sha256: 00c14815d75218f6b7a57a557cf469850e372f5cf44125acd8d876d0be2d3009
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1280
+    native_height: 720
+    native_fps_num: 60
+    native_fps_den: 1
+    category: conference
+    note: Four people in a conference call. Screen-like content. HEVC CTC sequence mirrored by Xiph; research use.
+    byte_start: 0
+    byte_length: 45619457
+  - id: johnny
+    source_url: https://media.xiph.org/video/derf/y4m/Johnny_1280x720_60.y4m
+    sha256: ba8fe93fa0769bb370e00f7bab383e6d49fe52c6b9cda19d069546bb1606acd9
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1280
+    native_height: 720
+    native_fps_num: 60
+    native_fps_den: 1
+    category: conference
+    note: "A single speaker, conference framing. HEVC CTC sequence mirrored by Xiph; research use."
+    byte_start: 0
+    byte_length: 45619457
+  - id: kristen_and_sara
+    source_url: https://media.xiph.org/video/derf/y4m/KristenAndSara_1280x720_60.y4m
+    sha256: 61d96e53b3092766533b4bd9bd959462341a02e08741a71f592fcc49b91a46da
+    license: Xiph derf (freely redistributable)
+    license_url: https://media.xiph.org/video/derf/
+    native_width: 1280
+    native_height: 720
+    native_fps_num: 60
+    native_fps_den: 1
+    category: conference
+    note: "Two speakers, conference framing. HEVC CTC sequence mirrored by Xiph; research use."
+    byte_start: 0
+    byte_length: 45619457
+  - id: sintel_trailer
+    source_url: https://media.xiph.org/video/derf/y4m/sintel_trailer_2k_1080p24.y4m
+    sha256: 644ebb1da14702762cf0aeab5d5d98bda81e152c0064cdc4f19c2da02b02472f
+    license: CC BY 3.0
+    license_url: https://creativecommons.org/licenses/by/3.0/
+    native_width: 1920
+    native_height: 1080
+    native_fps_num: 24
+    native_fps_den: 1
+    category: animation
+    note: "Sintel trailer (Blender Foundation). Computer animation, not a camera capture."
+    byte_start: 0
+    byte_length: 102643443
+  - id: shaken_dry
+    source_url: https://media.xiph.org/uvg/ShakeNDry_3840x2160_120fps_420_10bit_YUV_Y4M.7z
+    sha256: 103ec02ccdf5c12dbc066c5946e0a08d2d087efa0f8c4124bf003236484a81c4
+    license: CC BY-NC 3.0
+    license_url: https://creativecommons.org/licenses/by-nc/3.0/
+    native_width: 3840
+    native_height: 2160
+    native_fps_num: 30
+    native_fps_den: 1
+    category: water
+    note: "A dog shaking off water. Fine droplets, short motion. Uncompressed 10-bit y4m inside a 7z archive. The archive name says 120fps; the y4m header is 30/1."
+    archive: "7z"
+    inner_path: ShakeNDry_3840x2160_120fps_420_10bit_YUV.y4m
+  - id: bosphorus
+    source_url: https://media.xiph.org/uvg/Bosphorus_3840x2160_120fps_420_10bit_YUV_Y4M.7z
+    sha256: cee55d4c7024bfc9d2e1d0becb8ab448b693adf2e9d51233416c966ac0216cc4
+    license: CC BY-NC 3.0
+    license_url: https://creativecommons.org/licenses/by-nc/3.0/
+    native_width: 3840
+    native_height: 2160
+    native_fps_num: 30
+    native_fps_den: 1
+    category: camera-motion
+    note: A ferry on the Bosphorus. Camera motion over water. Uncompressed 10-bit y4m inside a 7z archive. The archive name says 120fps; the y4m header is 30/1.
+    archive: "7z"
+    inner_path: Bosphorus_3840x2160_120fps_420_10bit_YUV.y4m
+  - id: honey_bee
+    source_url: https://media.xiph.org/uvg/HoneyBee_3840x2160_120fps_420_10bit_YUV_Y4M.7z
+    sha256: 7b2bf236c7b0318e2af73f616effa5ca43f0ba80f100facefa706366e6f339a4
+    license: CC BY-NC 3.0
+    license_url: https://creativecommons.org/licenses/by-nc/3.0/
+    native_width: 3840
+    native_height: 2160
+    native_fps_num: 30
+    native_fps_den: 1
+    category: fine-detail
+    note: "A honey bee. Fine detail, little global motion. Uncompressed 10-bit y4m inside a 7z archive. The archive name says 120fps; the y4m header is 30/1."
+    archive: "7z"
+    inner_path: HoneyBee_3840x2160_120fps_420_10bit_YUV.y4m
+  - id: street_50
+    source_url: "https://upload.wikimedia.org/wikipedia/commons/3/30/50_Street_video_vc.ogv"
+    sha256: f4e2bf0a17493811f4a37716b9955a7d6b7568bcf40be9094a697a0ac2022550
+    license: CC BY 2.0
+    license_url: https://creativecommons.org/licenses/by/2.0/
+    native_width: 1440
+    native_height: 1080
+    native_fps_num: 25
+    native_fps_den: 1
+    category: urban
+    note: "Street traffic, already Theora-compressed. The canonical y4m is a decode of that file."
+  - id: lawn_mower
+    source_url: "https://upload.wikimedia.org/wikipedia/commons/a/a7/Handheld_lawn_mower.webm"
+    sha256: 698afd597ea08dad1452ed330c80f1a4afb919bb07ab7e04a6905f9e5f78c731
+    license: CC BY 3.0
+    license_url: https://creativecommons.org/licenses/by/3.0/
+    native_width: 1080
+    native_height: 1920
+    native_fps_num: 30
+    native_fps_den: 1
+    category: camera-motion
+    note: "Portrait phone video of a lawn mower, already VP9-compressed. Center-crop keeps the middle."
+  - id: rust_laser
+    source_url: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Cleaning_rust_with_handheld_laser.webm"
+    sha256: 939e74ca41aaceb7e13752b647aff1561eeb9d084a65b7e28aaa19c1cb62957e
+    license: CC BY 3.0
+    license_url: https://creativecommons.org/licenses/by/3.0/
+    native_width: 854
+    native_height: 480
+    native_fps_num: 25
+    native_fps_den: 1
+    category: fine-detail
+    note: "A handheld laser on rust, already VP9-compressed."
+  - id: volcano
+    source_url: "https://upload.wikimedia.org/wikipedia/commons/5/53/007_Volcano_eruption_of_Litli-Hr%C3%BAtur_in_Iceland_in_2023_Video_by_Giles_Laurent.webm"
+    sha256: 01dbdc97fdc961ff8c8c771b59e71f851b280386e7f01e5ce0b1f16f532afc95
+    license: CC BY-SA 4.0
+    license_url: https://creativecommons.org/licenses/by-sa/4.0/
+    native_width: 3840
+    native_height: 2160
+    native_fps_num: 30000
+    native_fps_den: 1001
+    category: landscape
+    note: "Litli-Hrutur eruption, Giles Laurent, already VP9-compressed."

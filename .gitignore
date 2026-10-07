@@ -32,6 +32,9 @@ htmlcov/
 # Notebook caches
 .ipynb_checkpoints/
 
+# Local tool builds (pinned ffmpeg lives here on a dev machine).
+/tools/
+
 # OS and editor
 .DS_Store
 .idea/
