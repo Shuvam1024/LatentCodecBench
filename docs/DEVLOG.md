@@ -41,3 +41,14 @@ x264, x265, and SVT-AV1 can now be run as a function instead of a shell one-line
 - Presets: x264 `medium`, x265 `medium`, SVT-AV1 preset 6. On `crowd_run` at one thread those were 0.7 s, 1.5 s, and 2.0 s. Preset 8 was faster and was not chosen. Tests use `ultrafast` so CI stays on a 64×64 clip.
 - One thread, and no `-tune psnr`. This ffmpeg's libsvtav1 defaults to a PSNR tune, so the wrapper sets `tune=0` (visual quality) explicitly.
 - Rate is the sum of video packet sizes. Bits per pixel divides by width × height × frames, so a 60 fps clip and a 24 fps clip share an x-axis. Decode time is a one-thread decode to null, not the time to write a reconstructed y4m.
+
+## 2026-10-07 — Phase 1.4 and 1.5, results and the first RD curves
+
+The sweep ran, on all 34 clips, and the table is small enough to commit.
+
+- `lcb baselines run` writes one CSV. The run id is the UTC time, the git SHA of the code that ran, and the SHA256 of the config file. A second invocation skips operating points already in the file. ADR-0006. The schema is `docs/results/SCHEMA.md`.
+- BD-rate is a PCHIP integral. A half-rate curve is exactly -50%. The published four-point vector from the `bjontegaard` package (`pchip`) is locked at -4.417% BD-rate. The number reported for the set is the mean of the per-clip BD-rates, anchor x264.
+- `lcb plot rd` draws mean PSNR-Y and mean VMAF against bits per pixel, log x-axis.
+- The sweep is 612 encodes (34 × 3 × 6). On this machine that finished in one sitting: the presets timed earlier were about 1–2 seconds per clip, and one VMAF was about 0.3 seconds. No subset.
+- BD-rate of x265 against x264: -27.45% on PSNR-Y, -26.20% on VMAF. SVT-AV1 against x264: -39.20% on PSNR-Y, -42.63% on VMAF. All 34 clips overlapped. LPIPS is empty because PyTorch was not installed.
+- The four camera clips are re-encodes of Theora or VP9. That is in `DATA.md`, and the mean includes them.

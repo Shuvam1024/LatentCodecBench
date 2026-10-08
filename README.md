@@ -14,8 +14,8 @@ LatentCodecBench measures the variational autoencoders inside open video generat
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| 0. Foundation | Package, CI, docs | In review |
-| 1. Data and classic codecs | Clips, metrics, x264 / x265 / SVT-AV1 | Not started |
+| 0. Foundation | Package, CI, docs | Done |
+| 1. Data and classic codecs | Clips, metrics, x264 / x265 / SVT-AV1 | In review |
 | 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Not started |
 | 3. Codec leak | Source-codec artifacts in the latent | Not started |
 | 4. Post-filter | Tiny decoder-side network, fixed compute | Not started |
@@ -55,6 +55,23 @@ uv run lcb data fetch
 ```
 
 That command downloads each source, deletes a file whose SHA256 does not match, and writes `data/clips/{id}.y4m`. For the large Xiph derf files the digest covers a 33-frame byte range. For UVG and the camera clips it covers the whole file.
+
+## Classic codec baselines
+
+The first measured curves are x264, x265, and SVT-AV1 on all 34 canonical clips (832×480, 33 frames). Presets are `medium`, `medium`, and SVT-AV1 preset 6, six CRF points each, one thread. The tidy table is [docs/results/classic-baselines.csv](docs/results/classic-baselines.csv) (612 rows). Run id `20261007T235429Z-f5d4b8178216-3a5ec0cc6ff4` names the revision that executed the sweep.
+
+BD-rate against x264, the mean of the per-clip PCHIP integrals. Negative means fewer bits for the same quality. Every clip overlapped; none were skipped.
+
+| Codec | BD-rate, PSNR-Y | BD-rate, VMAF |
+| --- | --- | --- |
+| x265 | -27.45% | -26.20% |
+| SVT-AV1 | -39.20% | -42.63% |
+
+![Mean PSNR-Y against bits per pixel](docs/figures/rd-psnr.png)
+
+![Mean VMAF against bits per pixel](docs/figures/rd-vmaf.png)
+
+Four of the 34 clips (`street_50`, `lawn_mower`, `rust_laser`, `volcano`) were already Theora or VP9, so those rows are a re-encode. Derf and UVG are not. LPIPS is blank in this table: the sweep ran without PyTorch. [ADR-0005](docs/decisions/0005-codec-baselines.md) and [ADR-0006](docs/decisions/0006-rd-curves-and-bd-rate.md) record the knobs and the BD-rate definition.
 
 ## Quickstart
 
