@@ -50,5 +50,14 @@ The sweep ran, on all 34 clips, and the table is small enough to commit.
 - BD-rate is a PCHIP integral. A half-rate curve is exactly -50%. The published four-point vector from the `bjontegaard` package (`pchip`) is locked at -4.417% BD-rate. The number reported for the set is the mean of the per-clip BD-rates, anchor x264.
 - `lcb plot rd` draws mean PSNR-Y and mean VMAF against bits per pixel, log x-axis.
 - The sweep is 612 encodes (34 × 3 × 6). On this machine that finished in one sitting: the presets timed earlier were about 1–2 seconds per clip, and one VMAF was about 0.3 seconds. No subset.
-- BD-rate of x265 against x264: -27.45% on PSNR-Y, -26.20% on VMAF. SVT-AV1 against x264: -39.20% on PSNR-Y, -42.63% on VMAF. All 34 clips overlapped. LPIPS is empty because PyTorch was not installed.
+- BD-rate of x265 against x264: -27.45% on PSNR-Y, -26.20% on VMAF. SVT-AV1 against x264: -39.20% on PSNR-Y, -42.63% on VMAF. All 34 clips had some shared range. The overlap fraction on that first ladder was under 75% for SVT-AV1 on 32 of 34 clips, for both metrics. LPIPS is empty because PyTorch was not installed. The 2026-10-08 entry replaces this table.
+
+## 2026-10-08 — CRF ladders retuned, overlap recorded
+
+The first SVT-AV1 ladder stopped near 33 dB PSNR-Y and VMAF 71. x264 CRF 43 reached about 28 dB and VMAF 34. Calling that "every clip overlapped" hid a narrow intersection. ADR-0005.
+
+- x264 and x265 are now 18, 22, 26, 30, 34, 38. SVT-AV1 is 28, 35, 42, 49, 56, 63. CRF 63 is the end of the SVT-AV1 dial, and on this set it averages about 30.6 dB and VMAF 56, next to x264 CRF 38. CRF 36 and CRF 40 were encoded on all 34 clips and covered less of the same range.
+- `docs/results/overlap.csv` stores the fraction for each clip, test codec, and metric. `below_0_75` is 1 when the fraction is under 75%. The mean of the fractions is reported with the BD-rate. A narrow pair stays in the mean.
+- The sweep ran again: 612 encodes, run id `20261008T010001Z-1a9353d785d3-baa565d2b8a8`, on the pinned September ffmpeg. Points present in both tables (x264 and x265 at CRF 18 and 38, SVT-AV1 at CRF 28) match the previous bits, PSNR, and VMAF, so the pin did not move those rows. The BD-rates moved because the ladders did.
+- x265 against x264: -24.66% on PSNR-Y, mean overlap 85.37%, none under 75%. -20.44% on VMAF, mean overlap 84.45%, 2 under 75% (`controlled_burn`, `rust_laser`). SVT-AV1 against x264: -41.99% on PSNR-Y, mean overlap 80.98%, 7 under 75%. -44.86% on VMAF, mean overlap 77.66%, 12 under 75%. No clip was skipped. The short pairs are mostly easy clips, where CRF 63 has not reached x264 CRF 38. LPIPS is still empty.
 - The four camera clips are re-encodes of Theora or VP9. That is in `DATA.md`, and the mean includes them.

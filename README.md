@@ -58,14 +58,22 @@ That command downloads each source, deletes a file whose SHA256 does not match, 
 
 ## Classic codec baselines
 
-The first measured curves are x264, x265, and SVT-AV1 on all 34 canonical clips (832×480, 33 frames). Presets are `medium`, `medium`, and SVT-AV1 preset 6, six CRF points each, one thread. The tidy table is [docs/results/classic-baselines.csv](docs/results/classic-baselines.csv) (612 rows). Run id `20261007T235429Z-f5d4b8178216-3a5ec0cc6ff4` names the revision that executed the sweep.
+The first measured curves are x264, x265, and SVT-AV1 on all 34 canonical clips (832×480, 33 frames). Presets are `medium`, `medium`, and SVT-AV1 preset 6, six CRF points each, one thread. x264 and x265 use CRF 18, 22, 26, 30, 34, 38. SVT-AV1 uses 28, 35, 42, 49, 56, 63. The tidy table is [docs/results/classic-baselines.csv](docs/results/classic-baselines.csv) (612 rows). Run id `20261008T010001Z-1a9353d785d3-baa565d2b8a8` names the revision that executed the sweep.
 
-BD-rate against x264, the mean of the per-clip PCHIP integrals. Negative means fewer bits for the same quality. Every clip overlapped; none were skipped.
+BD-rate against x264, the mean of the per-clip PCHIP integrals. Negative means fewer bits for the same quality. Every clip had a shared quality range, so none were skipped. Overlap is the length of that shared range divided by the length of the union. The mean is in the table. A pair under 75% stays in the mean and is flagged in [docs/results/overlap.csv](docs/results/overlap.csv): the integral on that clip only covers the band both curves reach.
 
-| Codec | BD-rate, PSNR-Y | BD-rate, VMAF |
-| --- | --- | --- |
-| x265 | -27.45% | -26.20% |
-| SVT-AV1 | -39.20% | -42.63% |
+| Codec | BD-rate, PSNR-Y | Mean overlap, PSNR-Y | BD-rate, VMAF | Mean overlap, VMAF |
+| --- | --- | --- | --- | --- |
+| x265 | -24.66% | 85.37% | -20.44% | 84.45% |
+| SVT-AV1 | -41.99% | 80.98% | -44.86% | 77.66% |
+
+Pairs under 75%:
+
+- x265 on VMAF, 2 of 34: `controlled_burn`, `rust_laser`. PSNR-Y is at or above 75% on every clip.
+- SVT-AV1 on PSNR-Y, 7 of 34: `controlled_burn`, `four_people`, `johnny`, `kristen_and_sara`, `pedestrian_area`, `sintel_trailer`, `snow_mnt`.
+- SVT-AV1 on VMAF, 12 of 34: `controlled_burn`, `dinner`, `four_people`, `honey_bee`, `in_to_tree`, `johnny`, `kristen_and_sara`, `lawn_mower`, `old_town_cross`, `pedestrian_area`, `sintel_trailer`, `snow_mnt`.
+
+Those are mostly easy clips. SVT-AV1 at CRF 63, the top of its dial, is still cleaner there than x264 at CRF 38. The BD-rate on that clip is the high-quality band the curves share. It does not describe x264 once x264 has gone softer than SVT-AV1 can.
 
 ![Mean PSNR-Y against bits per pixel](docs/figures/rd-psnr.png)
 
