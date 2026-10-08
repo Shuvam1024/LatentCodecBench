@@ -37,7 +37,7 @@ A decoded clip now has a number next to it, and each number is checked against a
 
 x264, x265, and SVT-AV1 can now be run as a function instead of a shell one-liner, with the knobs written down.
 
-- Six CRF points each. x264 and x265 use 18, 23, 28, 33, 38, 43. SVT-AV1 uses 20, 28, 36, 44, 52, 60 because its dial runs to 63. The numbers are not a shared scale. ADR-0005.
+- Six CRF points each. x264 and x265 use 18, 22, 26, 30, 34, 38. SVT-AV1 uses 28, 35, 42, 49, 56, 63. The low end of x264 used to be 43, and SVT-AV1 used to stop at 60. Those two curves barely shared a quality range, so the ladders now end where the measured ranges meet. The numbers are still not a shared scale. ADR-0005.
 - Presets: x264 `medium`, x265 `medium`, SVT-AV1 preset 6. On `crowd_run` at one thread those were 0.7 s, 1.5 s, and 2.0 s. Preset 8 was faster and was not chosen. Tests use `ultrafast` so CI stays on a 64×64 clip.
 - One thread, and no `-tune psnr`. This ffmpeg's libsvtav1 defaults to a PSNR tune, so the wrapper sets `tune=0` (visual quality) explicitly.
 - Rate is the sum of video packet sizes. Bits per pixel divides by width × height × frames, so a 60 fps clip and a 24 fps clip share an x-axis. Decode time is a one-thread decode to null, not the time to write a reconstructed y4m.

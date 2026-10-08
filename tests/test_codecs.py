@@ -33,9 +33,9 @@ def test_kbps_uses_the_source_frame_rate() -> None:
 
 
 def test_crf_ladders_have_six_increasing_points() -> None:
-    assert X264_CRF == (18, 23, 28, 33, 38, 43)
-    assert X265_CRF == (18, 23, 28, 33, 38, 43)
-    assert SVT_AV1_CRF == (20, 28, 36, 44, 52, 60)
+    assert X264_CRF == (18, 22, 26, 30, 34, 38)
+    assert X265_CRF == (18, 22, 26, 30, 34, 38)
+    assert SVT_AV1_CRF == (28, 35, 42, 49, 56, 63)
     assert BENCHMARK_PRESET == {"libx264": "medium", "libx265": "medium", "libsvtav1": "6"}
 
 

@@ -22,11 +22,13 @@ from latentcodecbench.codecs.rate import bits_per_pixel, kilobits_per_second
 from latentcodecbench.data.preprocess import ffmpeg_binary
 from latentcodecbench.data.y4m import parse_header
 
-# Six points each, high quality to low. Chosen so a sweep spans the
-# steep part of a 480p curve without a seventh encode.
-X264_CRF: tuple[int, ...] = (18, 23, 28, 33, 38, 43)
-X265_CRF: tuple[int, ...] = (18, 23, 28, 33, 38, 43)
-SVT_AV1_CRF: tuple[int, ...] = (20, 28, 36, 44, 52, 60)
+# Six points each. The ends are the quality range the three codecs
+# actually share: x264 CRF 43 sits below SVT-AV1 at CRF 63, and SVT-AV1
+# CRF 20 sits above x264 CRF 18. Interior points are an even step across
+# that span. See ADR-0005.
+X264_CRF: tuple[int, ...] = (18, 22, 26, 30, 34, 38)
+X265_CRF: tuple[int, ...] = (18, 22, 26, 30, 34, 38)
+SVT_AV1_CRF: tuple[int, ...] = (28, 35, 42, 49, 56, 63)
 
 # Timed on crowd_run (832x480, 33 frames, one thread): x264 medium 0.7 s,
 # x265 medium 1.5 s, SVT-AV1 preset 6 about 2 s. Preset 8 was 1.2 s.
