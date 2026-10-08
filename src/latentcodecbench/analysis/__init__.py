@@ -7,18 +7,34 @@ latents on the same axes. Phase 3 measures how far a re-encoded source
 moves the latent.
 """
 
-from latentcodecbench.analysis.bdrate import BjontegaardError, bd_psnr, bd_rate
-from latentcodecbench.analysis.plot import BdRateSummary, mean_bd_rate, plot_rd
+from latentcodecbench.analysis.bdrate import (
+    OVERLAP_FLAG,
+    BjontegaardError,
+    bd_psnr,
+    bd_rate,
+    overlap_fraction,
+)
+from latentcodecbench.analysis.plot import (
+    BdRateSummary,
+    ClipOverlap,
+    mean_bd_rate,
+    plot_rd,
+    write_overlap,
+)
 from latentcodecbench.analysis.table import ResultRow, read_results, write_results
 
 __all__ = [
+    "OVERLAP_FLAG",
     "BdRateSummary",
     "BjontegaardError",
+    "ClipOverlap",
     "ResultRow",
     "bd_psnr",
     "bd_rate",
     "mean_bd_rate",
+    "overlap_fraction",
     "plot_rd",
     "read_results",
+    "write_overlap",
     "write_results",
 ]

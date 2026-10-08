@@ -61,6 +61,12 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--csv", type=Path, required=True)
     rd.add_argument("--out-dir", type=Path, default=Path("docs/figures"))
     rd.add_argument("--anchor", default="libx264")
+    rd.add_argument(
+        "--overlap-out",
+        type=Path,
+        default=None,
+        help="CSV of per-clip overlap fractions. Pairs under 0.75 are flagged.",
+    )
     return parser
 
 
@@ -126,7 +132,12 @@ def _plot_rd(args: argparse.Namespace) -> int:
     if not rows:
         print(f"{args.csv} has no rows")
         return 1
-    psnr_path, vmaf_path = plot_rd(rows, args.out_dir, anchor=args.anchor)
+    psnr_path, vmaf_path = plot_rd(
+        rows,
+        args.out_dir,
+        anchor=args.anchor,
+        overlap_out=args.overlap_out,
+    )
     print(psnr_path)
     print(vmaf_path)
     return 0

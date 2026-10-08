@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from latentcodecbench.analysis.config import load_config
-from latentcodecbench.analysis.plot import mean_bd_rate, plot_rd
+from latentcodecbench.analysis.plot import clip_overlaps, mean_bd_rate, plot_rd, write_overlap
 from latentcodecbench.analysis.run import run_baselines
 from latentcodecbench.analysis.table import ResultRow, read_results, write_results
 from latentcodecbench.codecs.baseline import (
@@ -102,6 +102,38 @@ def test_mean_bd_rate_of_a_half_rate_curve() -> None:
     assert summaries[0].mean_bd_rate == pytest.approx(-50.0)
     assert summaries[0].clips == 1
     assert summaries[0].skipped == 0
+    assert summaries[0].mean_overlap == pytest.approx(1.0)
+    assert summaries[0].below_overlap == 0
+
+
+def test_overlap_table_flags_a_short_shared_range(tmp_path: Path) -> None:
+    # Anchor covers 28..40 dB. Test covers 36..44. Intersection 4, union 16.
+    rows = [
+        _row("clip", "libx264", crf, bpp, psnr, vmaf)
+        for crf, bpp, psnr, vmaf in (
+            (18, 0.40, 40.0, 90.0),
+            (22, 0.20, 36.0, 80.0),
+            (26, 0.10, 32.0, 60.0),
+            (30, 0.05, 28.0, 40.0),
+        )
+    ]
+    rows.extend(
+        _row("clip", "libsvtav1", crf, bpp, psnr, vmaf)
+        for crf, bpp, psnr, vmaf in (
+            (28, 0.30, 44.0, 92.0),
+            (35, 0.20, 42.0, 91.0),
+            (42, 0.10, 40.0, 90.0),
+            (49, 0.05, 36.0, 88.0),
+        )
+    )
+    found = clip_overlaps(rows)
+    psnr = next(row for row in found if row.metric == "psnr_y")
+    assert psnr.overlap == pytest.approx(4.0 / 16.0)
+    path = tmp_path / "overlap.csv"
+    write_overlap(path, found)
+    text = path.read_text(encoding="utf-8")
+    assert "below_0_75" in text.splitlines()[0]
+    assert ",1\n" in text or text.endswith(",1\n")
 
 
 def test_plot_writes_both_figures(tmp_path: Path) -> None:

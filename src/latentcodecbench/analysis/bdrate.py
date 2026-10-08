@@ -23,6 +23,33 @@ class BjontegaardError(ValueError):
     """The two curves do not define a BD delta."""
 
 
+# ``bjontegaard`` warns when this fraction is smaller. The fraction is the
+# intersection of the two ranges divided by their union.
+OVERLAP_FLAG = 0.75
+
+
+def overlap_fraction(
+    distortion_anchor: list[float] | tuple[float, ...],
+    distortion_test: list[float] | tuple[float, ...],
+) -> float:
+    """Shared fraction of two distortion ranges, in ``[0, 1]``.
+
+    BD-rate integrates over the intersection. This number is how much of
+    the combined range that intersection is. A value under
+    ``OVERLAP_FLAG`` is the case ``bjontegaard`` warns about.
+    """
+    anchor = np.asarray(distortion_anchor, dtype=np.float64)
+    test = np.asarray(distortion_test, dtype=np.float64)
+    if anchor.size == 0 or test.size == 0:
+        return 0.0
+    total = float(max(np.max(anchor), np.max(test)) - min(np.min(anchor), np.min(test)))
+    if total <= 0.0:
+        return 0.0
+    low = float(max(np.min(anchor), np.min(test)))
+    high = float(min(np.max(anchor), np.max(test)))
+    return max(high - low, 0.0) / total
+
+
 def bd_rate(
     rate_anchor: list[float] | tuple[float, ...],
     distortion_anchor: list[float] | tuple[float, ...],

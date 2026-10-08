@@ -4,10 +4,10 @@ version: 1
 codecs:
   libx264:
     preset: medium
-    crf: [18, 23, 28, 33, 38, 43]
+    crf: [18, 22, 26, 30, 34, 38]
   libx265:
     preset: medium
-    crf: [18, 23, 28, 33, 38, 43]
+    crf: [18, 22, 26, 30, 34, 38]
   libsvtav1:
     preset: "6"
-    crf: [20, 28, 36, 44, 52, 60]
+    crf: [28, 35, 42, 49, 56, 63]

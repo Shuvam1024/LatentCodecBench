@@ -28,4 +28,17 @@ Rows are sorted by `clip_id`, then `codec`, then `crf`.
 
 A second run against the same file skips a `(clip_id, codec, crf)` that is already present and keeps the original `run_id`. A file whose `config_sha256` does not match the config on the command line is left alone.
 
-BD-rate is not a column. It is computed from the rows, per clip, then averaged. `lcb plot rd` prints that mean.
+BD-rate is not a column. It is computed from the rows, per clip, then averaged. `lcb plot rd` prints that mean and the mean overlap.
+
+`docs/results/overlap.csv` is the per-clip overlap that mean is taken from. One row is one clip, one test codec, and one metric, against libx264.
+
+| Column | Meaning |
+| --- | --- |
+| `clip_id` | Id from the results table. |
+| `anchor` | `libx264`. |
+| `codec` | The test codec, `libx265` or `libsvtav1`. |
+| `metric` | `psnr_y` or `vmaf`. |
+| `overlap` | Intersection of the two metric ranges, divided by their union. This is the fraction the `bjontegaard` package compares with 0.75. |
+| `below_0_75` | `1` when `overlap` is under 0.75, otherwise `0`. |
+
+A pair under 0.75 is still included in the mean BD-rate when the ranges share any interval. The flag says the integral only covers part of the combined curve. A pair with no shared range is omitted from the BD-rate mean and still listed here with overlap `0`.

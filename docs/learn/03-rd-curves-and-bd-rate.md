@@ -43,6 +43,8 @@ PCHIP BD-rate on that vector is -4.417485350589045%. BD-PSNR is 0.11969278542479
 
 BD-rate is computed per clip, then averaged across clips. One number for the whole set can hide a clip where the ranking flips; the mean of the per-clip numbers is what a sequence report usually quotes, and the per-clip values can be recomputed from the CSV. A clip whose curves do not overlap is skipped and counted, not given a NaN that poisons the mean.
 
+How much they overlap is its own number. Take the two quality ranges. Divide the length they share by the length from the lower of the two floors to the higher of the two ceilings. That fraction is 1 when the ranges sit on top of each other and small when one curve only crosses the other at one end. The `bjontegaard` package warns under 0.75. This benchmark stores the fraction for every clip and both metrics, and marks a pair under 0.75, because "the ranges touch" can still mean the integral only saw the top of one curve.
+
 The figure next to that number is the mean curve: at each CRF, average bits per pixel and average PSNR (or VMAF) across clips, then plot. CRF is not the x-axis. x264's CRF 28 and SVT-AV1's CRF 28 are not the same operating point, so the curves are not lined up by CRF index. They are lined up by the rate that actually came out.
 
 ## Source
