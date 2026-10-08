@@ -26,12 +26,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Cache pinned ffmpeg
+        id: ffmpeg-cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/ffmpeg-pin
+          key: ffmpeg-linux64-gpl-68ee646831adaae2495618346f3bba94ff207ff83bbd34d643e7004730d66269
+
       - name: Install pinned ffmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: bash scripts/install-ffmpeg.sh "${{ runner.temp }}/ffmpeg-pin"
+
+      - name: Check pinned ffmpeg
         run: |
-          sudo bash scripts/install-ffmpeg.sh /opt/ffmpeg
-          echo "/opt/ffmpeg/bin" >> "$GITHUB_PATH"
+          echo "${{ runner.temp }}/ffmpeg-pin/bin" >> "$GITHUB_PATH"
           # GITHUB_PATH applies to later steps, not to this one.
-          ffmpeg=/opt/ffmpeg/bin/ffmpeg
+          ffmpeg="${{ runner.temp }}/ffmpeg-pin/bin/ffmpeg"
           "$ffmpeg" -hide_banner -version
           encoders="$("$ffmpeg" -hide_banner -encoders)"
           for name in libx264 libx265 libsvtav1; do

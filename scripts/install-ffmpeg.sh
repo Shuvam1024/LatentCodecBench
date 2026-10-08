@@ -5,8 +5,10 @@
 set -euo pipefail
 
 dest="${1:-/opt/ffmpeg}"
-url="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-06-13-06/ffmpeg-N-127222-g151814650f-linux64-gpl.tar.xz"
-sha256="0223797ce0ece4b58a11af30cd69318bcdaf1fad395dbaeb163e1abc588706a0"
+# Month-end release-branch build. BtbN drops daily builds after 14 days
+# and keeps the last build of each month for two years. See ADR-0003.
+url="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n9.0.2-17-g2a571b6068-linux64-gpl-9.0.tar.xz"
+sha256="68ee646831adaae2495618346f3bba94ff207ff83bbd34d643e7004730d66269"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
