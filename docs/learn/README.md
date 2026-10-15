@@ -8,3 +8,4 @@ Short notes for interview prep. Each one is about a page, in plain language, and
 | [01 — What the metrics miss](01-what-the-metrics-miss.md) | PSNR, SSIM, VMAF, and LPIPS, and the kind of error each one cannot see |
 | [02 — CRF, presets, and bits per pixel](02-crf-presets-and-bpp.md) | Why CRF is not a shared scale, what the preset is holding still, and a worked bpp example |
 | [03 — RD curves and BD-rate](03-rd-curves-and-bd-rate.md) | Reading a curve, the -50% worked example, and why BD-PSNR is not zero on that example |
+| [04 — What shape a latent is](04-latent-shape.md) | Channels, the causal `4k+1` / `8k+1` rule, and the 832×480×33 grid for each VAE |

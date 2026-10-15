@@ -29,7 +29,7 @@ dependencies = [
 gpu = ["torch>=2.4"]
 vae = [
     "accelerate>=1.1",
-    "diffusers>=0.32",
+    "diffusers==0.41.0",
     "safetensors>=0.4",
     "torch>=2.4",
     "transformers>=4.46",
@@ -56,6 +56,15 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# Locked torch comes from the CPU index so CI can import it.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/latentcodecbench"]

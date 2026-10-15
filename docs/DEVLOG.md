@@ -61,3 +61,13 @@ The first SVT-AV1 ladder stopped near 33 dB PSNR-Y and VMAF 71. x264 CRF 43 reac
 - The sweep ran again: 612 encodes, run id `20261008T010001Z-1a9353d785d3-baa565d2b8a8`, on the pinned September ffmpeg. Points present in both tables (x264 and x265 at CRF 18 and 38, SVT-AV1 at CRF 28) match the previous bits, PSNR, and VMAF, so the pin did not move those rows. The BD-rates moved because the ladders did.
 - x265 against x264: -24.66% on PSNR-Y, mean overlap 85.37%, none under 75%. -20.44% on VMAF, mean overlap 84.45%, 2 under 75% (`controlled_burn`, `rust_laser`). SVT-AV1 against x264: -41.99% on PSNR-Y, mean overlap 80.98%, 7 under 75%. -44.86% on VMAF, mean overlap 77.66%, 12 under 75%. No clip was skipped. The short pairs are mostly easy clips, where CRF 63 has not reached x264 CRF 38. LPIPS is still empty.
 - The four camera clips are re-encodes of Theora or VP9. That is in `DATA.md`, and the mean includes them.
+
+## 2026-10-15 — Phase 2.1, VAE wrapper and latent shape
+
+The four VAEs now share one encode/decode object. It does not load weights.
+
+- `VideoVae` takes pixels as `(batch, 3, frames, height, width)` in `[-1, 1]` and returns the posterior mean. Decode returns pixels. The legal length is `temporal_factor * k + 1`, checked before the forward.
+- The geometry is the published one: Wan2.1 and HunyuanVideo are 16 channels, 4×8×8; Wan2.2 TI2V-5B is 48 channels, 4×16×16; LTX-Video is 128 channels, 8×32×32. An 832×480×33 clip is `16×9×60×104`, `48×9×30×52`, and `128×5×15×26`. `docs/learn/04-latent-shape.md`.
+- CI builds those classes with random weights and narrow blocks. The block width is what got shrunk. The channel count and the downsample schedule are the real ones, because those are what set the grid. `from_pretrained` is patched to raise, and the job sets `HF_HUB_OFFLINE=1`.
+- Diffusers is pinned to 0.41.0. The three class files on tag `v0.41.0` were read before the pin: Wan's scale factors and the group-of-4 encode loop, LTX's `patch * 2^3` formula, Hunyuan's 16 / 8 / 4. ADR-0007. Torch for the extra is the CPU wheel, so the runner is not asked for a CUDA build.
+- The LTX encoder is causal and its decoder is not. The frame rule still follows the encoder. A 32-frame clip is rejected for every model in the set.

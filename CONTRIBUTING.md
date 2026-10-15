@@ -33,12 +33,14 @@ The subject is imperative and fits in one line. The body says why, when the subj
 Before opening a pull request:
 
 ```bash
-uv sync
+uv sync --extra vae
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run pytest
 ```
+
+`uv sync` without the extra still installs the codec baseline. The VAE shape tests skip in that environment. CI installs the extra and sets `LATENTCODECBENCH_REQUIRE_VAE=1`, so a skipped shape test fails the job there.
 
 Install the git hooks once, so Ruff runs on commit:
 

@@ -66,7 +66,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
-        run: uv sync --frozen
+        run: uv sync --frozen --extra vae
 
       - name: Ruff
         run: |
@@ -77,4 +77,9 @@ jobs:
         run: uv run mypy
 
       - name: Pytest
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          LATENTCODECBENCH_REQUIRE_VAE: "1"
         run: uv run pytest
