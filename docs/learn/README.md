@@ -10,5 +10,6 @@ Short notes for interview prep. Each one is about a page, in plain language, and
 | [03 — RD curves and BD-rate](03-rd-curves-and-bd-rate.md) | Reading a curve, the -50% worked example, and why BD-PSNR is not zero on that example |
 | [04 — What shape a latent is](04-latent-shape.md) | Channels, the causal `4k+1` / `8k+1` rule, and the 832×480×33 grid for each VAE |
 | [07 — Pins, licenses, and loading only the VAE](07-pins-and-licenses.md) | A revision plus `subfolder="vae"`, the license on each weight file, and which file is large for a 16 GB card |
+| [08 — Reconstruction, before a bitrate](08-reconstruction.md) | Phase 1 metrics on the real clips, Hunyuan tiled from the start, and why the rate columns are empty |
 
-Notes 05 and 06 are the bitrate notes named in the plan. This one is 07 so those names stay put.
+Notes 05 and 06 are the bitrate notes named in the plan. 07 and 08 sit after them so those names stay put.

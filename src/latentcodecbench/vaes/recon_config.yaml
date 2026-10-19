@@ -1,0 +1,16 @@
+# Uncoded reconstruction. Rate columns stay empty. See ADR-0009.
+version: 1
+kind: vae-reconstruction
+vaes:
+  - wan2_1
+  - hunyuan
+  - ltx
+  - wan2_2
+hunyuan_spatial_tiling: true
+runtime_dtype: capability
+metrics:
+  - psnr_y
+  - psnr_rgb
+  - ssim
+  - vmaf
+  - flicker

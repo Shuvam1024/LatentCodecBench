@@ -101,9 +101,9 @@ def mean_bd_rate(
             try:
                 values.append(
                     bd_rate(
-                        [row.bpp for row in anchor_rows],
+                        [_bpp(row) for row in anchor_rows],
                         anchor_dist,
-                        [row.bpp for row in test_rows],
+                        [_bpp(row) for row in test_rows],
                         test_dist,
                     )
                 )
@@ -215,6 +215,8 @@ def _draw(rows: list[ResultRow], path: Path, *, metric: str) -> None:
 
     grouped: dict[tuple[str, int], list[ResultRow]] = defaultdict(list)
     for row in rows:
+        if row.crf is None or row.bpp is None:
+            continue
         grouped[(row.codec, row.crf)].append(row)
     figure, axis = plt.subplots(figsize=(6.4, 4.4))
     for codec in _ORDER:
@@ -222,7 +224,7 @@ def _draw(rows: list[ResultRow], path: Path, *, metric: str) -> None:
         if not points:
             continue
         points.sort(key=lambda item: item[0])
-        bpp = [sum(row.bpp for row in samples) / len(samples) for _, samples in points]
+        bpp = [sum(_bpp(row) for row in samples) / len(samples) for _, samples in points]
         score = [
             sum(float(getattr(row, metric)) for row in samples) / len(samples)
             for _, samples in points
@@ -237,6 +239,12 @@ def _draw(rows: list[ResultRow], path: Path, *, metric: str) -> None:
     figure.tight_layout()
     figure.savefig(path, dpi=120)
     plt.close(figure)
+
+
+def _bpp(row: ResultRow) -> float:
+    if row.bpp is None:
+        raise BjontegaardError(f"{row.clip_id} {row.codec} has no bits per pixel")
+    return row.bpp
 
 
 def _print_summary(summary: BdRateSummary, anchor: str) -> None:
