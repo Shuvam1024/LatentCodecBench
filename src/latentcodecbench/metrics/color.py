@@ -91,4 +91,6 @@ def rgb_to_ycbcr(
 def _downsample_420(plane: npt.NDArray[np.float64]) -> npt.NDArray[np.uint8]:
     frames, height, width = plane.shape
     blocks = plane.reshape(frames, height // 2, 2, width // 2, 2)
-    return np.clip(np.rint(blocks.mean(axis=(2, 4))), 0.0, 255.0).astype(np.uint8)
+    rounded = np.clip(np.rint(blocks.mean(axis=(2, 4))), 0.0, 255.0)
+    coded: npt.NDArray[np.uint8] = rounded.astype(np.uint8)
+    return coded
