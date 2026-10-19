@@ -52,3 +52,43 @@ def ycbcr_to_rgb(
     blue = y + _B_FROM_CB * pb
     rgb = np.stack((red, green, blue), axis=-1)
     return np.clip(rgb, 0.0, 255.0)
+
+
+def rgb_to_ycbcr(
+    rgb: npt.NDArray[np.float64],
+) -> tuple[npt.NDArray[np.uint8], npt.NDArray[np.uint8], npt.NDArray[np.uint8]]:
+    """Invert :func:`ycbcr_to_rgb` and return 4:2:0 planes.
+
+    ``rgb`` is ``(frames, height, width, 3)`` in 0..255. Luma is rounded
+    per pixel. Chroma is the rounded mean of each 2x2 block, because the
+    canonical file is 4:2:0 and the forward path repeated each chroma
+    sample across that block.
+    """
+    if rgb.ndim != 4 or rgb.shape[-1] != 3:
+        raise ValueError(f"rgb must be (frames, height, width, 3), got {rgb.shape}")
+    frames, height, width, _channels = rgb.shape
+    if height % 2 or width % 2:
+        raise ValueError(f"4:2:0 needs even sides, got {width}x{height}")
+    red = rgb[..., 0].astype(np.float64)
+    green = rgb[..., 1].astype(np.float64)
+    blue = rgb[..., 2].astype(np.float64)
+    # Solve the forward matrix for y, then for the chroma that red and blue imply.
+    # green = y - a * (blue - y) - b * (red - y), with a and b the green row.
+    green_from_blue = _G_FROM_CB / _B_FROM_CB
+    green_from_red = _G_FROM_CR / _R_FROM_CR
+    scale = 1.0 + green_from_blue + green_from_red
+    y = (green + green_from_blue * blue + green_from_red * red) / scale
+    pr = (red - y) / _R_FROM_CR
+    pb = (blue - y) / _B_FROM_CB
+    luma = np.clip(np.rint(y / _Y_SCALE + 16.0), 0.0, 255.0).astype(np.uint8)
+    cb = _downsample_420(pb / _C_SCALE + 128.0)
+    cr = _downsample_420(pr / _C_SCALE + 128.0)
+    if luma.shape != (frames, height, width):
+        raise ValueError(f"luma shape {luma.shape} != {(frames, height, width)}")
+    return luma, cb, cr
+
+
+def _downsample_420(plane: npt.NDArray[np.float64]) -> npt.NDArray[np.uint8]:
+    frames, height, width = plane.shape
+    blocks = plane.reshape(frames, height // 2, 2, width // 2, 2)
+    return np.clip(np.rint(blocks.mean(axis=(2, 4))), 0.0, 255.0).astype(np.uint8)

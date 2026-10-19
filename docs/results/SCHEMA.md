@@ -53,3 +53,23 @@ A pair under 0.75 is still included in the mean BD-rate when the ranges share an
 | `psnr_db` | Pooled PSNR of the reconstruction against the noise input. |
 | `latent_shape` | `channels x frames x height x width`. |
 | `notes` | Empty, or the tiling retry. Hunyuan ran out of memory until spatial tiling was on. Framewise encoding was already on. |
+
+`docs/results/vae-recon.csv` is the reconstruction sweep from step 2.3, once `scripts/merge-vae-recon.py` has copied the Colab file in. One row is one VAE on one clip. The classic columns above are all present, so `read_results` loads the file. `codec` is `wan2_1`, `hunyuan`, `ltx`, or `wan2_2`. `preset` is `reconstruction`. `crf`, `bits`, `bpp`, and `kbps` are empty: this pass does not quantize the latent. `lpips` is empty. Rows are sorted by `clip_id`, then `codec`, then `crf`, and an empty `crf` sorts first.
+
+The config hash is the SHA256 of `configs/vae-recon.yaml`. A second run that sees a different hash leaves the file alone. A `(clip_id, codec)` already in the file is skipped, and the original `run_id` is kept.
+
+| Column | Meaning |
+| --- | --- |
+| `peak_vram_bytes` | `torch.cuda.max_memory_allocated` on the forward that succeeded. |
+| `spatial_tiling` | `1` when `use_tiling` was on for that forward. Hunyuan is `1` from the start. On 832×480 that switch tiles, because the class minimum is 256. |
+| `framewise_encoding`, `framewise_decoding` | The class flags after the tiling policy. Hunyuan's defaults are on. |
+| `retried_with_tiling` | `1` when the first forward ran out of memory and the clip was scored after tiling was turned on. |
+| `per_chunk_seconds` | Mean wall clock of `encoder.forward` during the encode, after a CUDA sync. |
+| `chunk_count` | How many of those calls ran. Wan uses `1 + (frames - 1) // 4`. |
+| `torch_version`, `diffusers_version` | The versions in the runtime that produced the row. |
+| `runtime_dtype` | `bfloat16` on compute capability 8 and above (an L4). `float16` on a T4. |
+| `gpu_name` | `torch.cuda.get_device_name`. |
+| `vae_revision` | The pinned revision from ADR-0008. |
+| `latent_shape` | `channels x frames x height x width`, without the batch axis. |
+
+`docs/results/vae-smoke-t4.csv` is a different file. Its PSNR uses a peak of 2 on noise. The reconstruction table uses the Phase 1 metrics on the canonical clips.

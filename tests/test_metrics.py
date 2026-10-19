@@ -11,7 +11,7 @@ import pytest
 
 from latentcodecbench.data.preprocess import ffmpeg_binary
 from latentcodecbench.data.y4m import write_y4m
-from latentcodecbench.metrics.color import ycbcr_to_rgb
+from latentcodecbench.metrics.color import rgb_to_ycbcr, ycbcr_to_rgb
 from latentcodecbench.metrics.flicker import temporal_flicker
 from latentcodecbench.metrics.perceptual import MetricUnavailable, lpips_distance, maybe_lpips
 from latentcodecbench.metrics.psnr import psnr
@@ -96,6 +96,28 @@ def test_limited_range_black_and_white() -> None:
     white = ycbcr_to_rgb(white_y, neutral, neutral)
     assert np.allclose(black, 0.0)
     assert np.allclose(white, 255.0)
+
+
+def test_gray_luma_roundtrips_exactly() -> None:
+    luma = np.full((1, 2, 2), 126, dtype=np.uint8)
+    chroma = np.full((1, 1, 1), 128, dtype=np.uint8)
+    back, cb, cr = rgb_to_ycbcr(ycbcr_to_rgb(luma, chroma, chroma))
+    assert np.array_equal(back, luma)
+    assert np.array_equal(cb, chroma)
+    assert np.array_equal(cr, chroma)
+
+
+def test_unclipped_block_roundtrips_luma_and_chroma() -> None:
+    # One 2x2 block. Luma varies, chroma is shared, and the RGB stays inside 0..255.
+    luma = np.array([[[80, 90], [100, 110]]], dtype=np.uint8)
+    cb = np.array([[[120]]], dtype=np.uint8)
+    cr = np.array([[[140]]], dtype=np.uint8)
+    rgb = ycbcr_to_rgb(luma, cb, cr)
+    assert np.all((rgb > 0.0) & (rgb < 255.0))
+    back, back_cb, back_cr = rgb_to_ycbcr(rgb)
+    assert np.array_equal(back, luma)
+    assert np.array_equal(back_cb, cb)
+    assert np.array_equal(back_cr, cr)
 
 
 def test_lpips_reports_missing_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -96,3 +96,12 @@ The second run loaded each VAE from `subfolder="vae"` and reconstructed one seed
 Hunyuan is the 16 GB problem. Step 2.3 turns spatial tiling on for it from the start, or runs it on an L4. The other three finished inside 6 GiB on this clip with tiling off.
 
 Wan2.2 printed `config attributes {'clip_output': False} ... will be ignored`. The pinned `vae/config.json` was written for Diffusers `0.35.0.dev0`, which took `clip_output`. Release 0.41.0 removed the argument in commit `58d2b10` and always clamps the RGB tensor to `[-1, 1]` after `unpatchify`. The official `Wan2_2_VAE.decode` clamps the same way. The inner `WanVAE_.decode` does not. This benchmark's pixels are in `[-1, 1]`, so the dropped key does not move the smoke. The warning is not a skipped weight.
+
+## 2026-10-19 — Phase 2.3, the reconstruction sweep
+
+The Colab notebook that scores the real clips is in place. The 136 rows are not. This change is the driver, the schema, and the merge script. The sweep itself runs on the user's GPU.
+
+- `notebooks/vae_sweep.ipynb` uninstalls torchao, installs a wheel from `/content` when one is there, and otherwise installs the git ref. It fetches the 34 clips through `fetch_clip` and `preprocess_clip`, so the manifest SHA256 is checked, and it scores each clip with the Phase 1 metrics against the source y4m. The pinned ffmpeg is the September build from ADR-0003. Output is `/content/results/vae-recon.csv`, written after every row. A `(clip_id, vae)` already in the file is skipped.
+- HunyuanVideo calls `enable_tiling()` before the first clip. The T4 smoke is why. The other three stay untiled unless a forward runs out of memory, then that clip is retried once. The flags, peak VRAM, encode time, decode time, and the mean `encoder.forward` time are columns. An L4 runs bfloat16. A T4 runs float16. ADR-0009. `docs/learn/08-reconstruction.md`.
+- The classic reader loads the file. `crf`, `bits`, `bpp`, and `kbps` are empty. The VAE columns are omitted from a classic CSV, so the Phase 1 table is unchanged. `configs/vae-recon.yaml` is the hashed config, and the same bytes are packaged as `latentcodecbench/vaes/recon_config.yaml` because a wheel does not contain `configs/`. `manifests/clips.yaml` is not in the wheel.
+- `scripts/merge-vae-recon.py` copies an uploaded CSV into `docs/results/vae-recon.csv`. It refuses a different config hash, a filled-in rate column, and a Hunyuan row with spatial tiling off. The results file stays out of this PR.

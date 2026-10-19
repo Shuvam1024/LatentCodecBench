@@ -86,6 +86,8 @@ def test_table_sorts_and_roundtrips_an_empty_lpips(tmp_path: Path) -> None:
     ]
     assert loaded[0].lpips is None
     assert loaded[0].bpp == pytest.approx(0.20)
+    header = path.read_text(encoding="utf-8").splitlines()[0]
+    assert "peak_vram_bytes" not in header.split(",")
 
 
 def test_mean_bd_rate_of_a_half_rate_curve() -> None:
