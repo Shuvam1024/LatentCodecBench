@@ -78,4 +78,21 @@ The wrapper can now load the published VAE file, and only that file.
 
 - Each pin is a repo, a revision, and `subfolder="vae"`. The sha256 of `vae/diffusion_pytorch_model.safetensors` is stored next to the revision. All four headers are float32. ADR-0008. `load_vae` calls `from_pretrained` on the VAE class. The transformer is not requested. CI still patches that call so a download fails the job; the load test checks the arguments and does not fetch.
 - Wan2.1 and Wan2.2 TI2V-5B are Apache-2.0. The A14B repo's VAE file has the same sha256 as Wan2.1, so the benchmark loads Wan2.1 for that geometry. LTX `vae/` was last changed on 2024-12-11. The model card maps 2B version 0.9 to the RAIL-M file (academic or research use). The Open Weights License 0.X in that repo covers 0.9.6 and later. Hunyuan's community repo has no license tag; the parent `tencent/HunyuanVideo` license is the Tencent Hunyuan Community License Agreement, which excludes the EU, the UK, and South Korea.
-- `notebooks/vae_smoke.ipynb` installs the repo and Diffusers 0.41.0 on top of the torch already in the runtime, then encodes and decodes one seeded 832×480×33 clip. It writes `results/vae-smoke.json` and a CSV with peak VRAM, encode time, decode time, and PSNR. A T4 loads float16. Capability 8 and above loads bfloat16. An out-of-memory forward turns tiling on, retries once, and records the flag. Wan2.2 TI2V-5B is the file most likely to need more than 16 GB. `docs/learn/07-pins-and-licenses.md`.
+- `notebooks/vae_smoke.ipynb` installs the repo and Diffusers 0.41.0 on top of the torch already in the runtime, then encodes and decodes one seeded 832×480×33 clip. It writes `results/vae-smoke.json` and a CSV with peak VRAM, encode time, decode time, and PSNR. A T4 loads float16. Capability 8 and above loads bfloat16. An out-of-memory forward turns tiling on, retries once, and records the flag. `docs/learn/07-pins-and-licenses.md`.
+
+## 2026-10-19 — T4 smoke, and the torchao install break
+
+The notebook ran on a free Colab T4, float16, Python 3.13. The first attempt failed for all four VAEs: `cannot import name 'FqnToConfig' from 'torchao.quantization'`. Colab preinstalls torchao 0.10.0. Diffusers 0.41.0 imports that name whenever torchao is installed, and 0.10.0 does not define it. The VAE load does not quantize, so the install cell now runs `pip uninstall -y torchao` before Diffusers. If torchao was already imported, the session has to be restarted. The cell also accepts a `latentcodecbench-*.whl` uploaded to `/content`, so a private repo does not need a token.
+
+The second run loaded each VAE from `subfolder="vae"` and reconstructed one seeded 832×480×33 noise clip. PSNR is about 10 dB because the input is noise. That number is a load check. The latent shapes match step 2.1. `docs/results/vae-smoke-t4.csv`.
+
+| VAE | Peak VRAM | Encode | Decode | PSNR | Latent shape | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| wan2_1 | 4.58 GiB | 8.09 s | 10.40 s | 9.80 dB | 16×9×60×104 | spatial tiling off |
+| hunyuan | 4.19 GiB | 17.04 s | 32.22 s | 10.51 dB | 16×9×60×104 | out of memory until spatial tiling; framewise already on |
+| ltx | 2.28 GiB | 0.86 s | 0.86 s | 10.75 dB | 128×5×15×26 | framewise off, spatial tiling off |
+| wan2_2 | 5.87 GiB | 3.73 s | 14.64 s | 10.06 dB | 48×9×30×52 | spatial tiling off |
+
+Hunyuan is the 16 GB problem. Step 2.3 turns spatial tiling on for it from the start, or runs it on an L4. The other three finished inside 6 GiB on this clip with tiling off.
+
+Wan2.2 printed `config attributes {'clip_output': False} ... will be ignored`. The pinned `vae/config.json` was written for Diffusers `0.35.0.dev0`, which took `clip_output`. Release 0.41.0 removed the argument in commit `58d2b10` and always clamps the RGB tensor to `[-1, 1]` after `unpatchify`. The official `Wan2_2_VAE.decode` clamps the same way. The inner `WanVAE_.decode` does not. This benchmark's pixels are in `[-1, 1]`, so the dropped key does not move the smoke. The warning is not a skipped weight.

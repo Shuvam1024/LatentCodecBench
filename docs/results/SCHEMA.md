@@ -42,3 +42,14 @@ BD-rate is not a column. It is computed from the rows, per clip, then averaged. 
 | `below_0_75` | `1` when `overlap` is under 0.75, otherwise `0`. |
 
 A pair under 0.75 is still included in the mean BD-rate when the ranges share any interval. The flag says the integral only covers part of the combined curve. A pair with no shared range is omitted from the BD-rate mean and still listed here with overlap `0`.
+
+`docs/results/vae-smoke-t4.csv` is the one-clip Colab T4 load check from step 2.2. One row is one VAE. The clip is seeded uniform noise, 832×480×33, values in `[-1, 1]`, float16, Python 3.13. PSNR uses a peak of 2. A value near 10 dB is what that noise reconstructs to. It is a load and shape check. The latent shapes match step 2.1.
+
+| Column | Meaning |
+| --- | --- |
+| `name` | `wan2_1`, `hunyuan`, `ltx`, or `wan2_2`. |
+| `peak_vram_gib` | `torch.cuda.max_memory_allocated` for the successful forward, in GiB. |
+| `encode_seconds`, `decode_seconds` | Wall clock of that forward, after a CUDA sync. |
+| `psnr_db` | Pooled PSNR of the reconstruction against the noise input. |
+| `latent_shape` | `channels x frames x height x width`. |
+| `notes` | Empty, or the tiling retry. Hunyuan ran out of memory until spatial tiling was on. Framewise encoding was already on. |

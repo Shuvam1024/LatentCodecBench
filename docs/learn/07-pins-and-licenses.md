@@ -31,7 +31,7 @@ The weight file is the part that can be counted before a run. Peak memory during
 | LTX-Video | 1.56 GiB | 0.78 GiB | Framewise encoding defaults off, so one 33-frame forward holds the whole clip. |
 | Wan2.2 TI2V-5B | 2.62 GiB | 1.31 GiB | Same group-of-4 encode as Wan2.1, and a much wider decoder. |
 
-A free Colab T4 has 16 GB and compute capability 7.5. It has float16 tensor cores. The smoke therefore loads float16 on a T4, and bfloat16 on capability 8 and above (L4, A100). Wan2.1 is the model expected to finish on a T4 with spatial tiling left off. Hunyuan already chunks time. LTX-Video can spill 16 GB while framewise encoding is off; the notebook turns tiling on if the forward runs out of memory and records that it did. Wan2.2 TI2V-5B is the one most likely to need a larger GPU even after that retry. The JSON from the notebook is the measurement. The table above is only the size of the file.
+A free Colab T4 has 16 GB and compute capability 7.5. It has float16 tensor cores. The smoke therefore loads float16 on a T4, and bfloat16 on capability 8 and above (L4, A100). The table above is the size of the file. A T4 run of one seeded 832×480×33 clip, float16, measured the forward: Wan2.1 peaked at 4.58 GiB with spatial tiling off, LTX-Video at 2.28 GiB with framewise encoding off, and Wan2.2 TI2V-5B at 5.87 GiB with spatial tiling off. HunyuanVideo ran out of memory with only its default framewise chunks, then finished at 4.19 GiB after spatial tiling was turned on. On a 16 GB card, step 2.3 keeps spatial tiling on for Hunyuan, or moves that VAE to an L4. `docs/results/vae-smoke-t4.csv`.
 
 ## Source
 

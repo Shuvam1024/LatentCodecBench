@@ -1,0 +1,5 @@
+name,peak_vram_gib,encode_seconds,decode_seconds,psnr_db,latent_shape,notes
+wan2_1,4.58,8.09,10.40,9.80,16x9x60x104,
+hunyuan,4.19,17.04,32.22,10.51,16x9x60x104,"retried with spatial tiling, framewise on"
+ltx,2.28,0.86,0.86,10.75,128x5x15x26,
+wan2_2,5.87,3.73,14.64,10.06,48x9x30x52,

@@ -38,7 +38,9 @@ A new weight is a new revision in `checkpoints.py` and in this ADR, checked agai
 
 Wan and Wan2.2 are Apache-2.0. LTX 0.9 is limited to academic or research use. Hunyuan's agreement is limited to its Territory, which excludes the EU, the UK, and South Korea, and it restricts using outputs to train another model.
 
-Weight size is not peak memory. Wan2.1 is about 0.47 GiB float32. Hunyuan is about 0.92 GiB. LTX-Video is about 1.56 GiB. Wan2.2 TI2V-5B is about 2.62 GiB, with a wide decoder. The smoke retries once with tiling after an out-of-memory error and records the flag. Wan2.2 is the VAE most likely to need more than a 16 GB T4.
+Weight size is not peak memory. A Colab T4, float16, Python 3.13, encoded and decoded one seeded 832×480×33 clip. Peaks were 4.58 GiB for Wan2.1, 2.28 GiB for LTX-Video, and 5.87 GiB for Wan2.2 TI2V-5B, all with spatial tiling off. HunyuanVideo ran out of memory on the default framewise path and finished at 4.19 GiB after spatial tiling. `docs/results/vae-smoke-t4.csv`. On a 16 GB card, step 2.3 tiles Hunyuan from the start, or runs it on an L4.
+
+The Wan2.2 `vae/config.json` still has `clip_output: false`. That key belonged to the class in the config's Diffusers version, `0.35.0.dev0`. Release 0.41.0 removed the argument (commit `58d2b10`, "fix vae patches"). `from_pretrained` warns and drops the key. Decode still clamps the RGB tensor to `[-1, 1]` after `unpatchify`. The official `Wan2_2_VAE.decode` in Wan-Video/Wan2.2 `wan/modules/vae2_2.py` clamps the same way after the inner decode. The inner `WanVAE_.decode` returns the unclamped tensor. This benchmark stores pixels in `[-1, 1]`, so the dropped key does not move the smoke.
 
 ## Alternatives
 

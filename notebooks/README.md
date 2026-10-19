@@ -10,4 +10,4 @@ A notebook is a driver, not the source of the implementation.
 - Do not commit checkpoints, datasets, or saved cell output.
 - `.ipynb_checkpoints/` is gitignored. So are `/data/`, `/results/`, and `/checkpoints/`.
 
-`vae_smoke.ipynb` is the step 2.2 load check. It installs this repo on top of the torch Colab already has, loads each pinned VAE from `subfolder="vae"`, and writes `results/vae-smoke.json`. Run it on a GPU runtime. Wan2.1 is the model expected to finish on a free T4. Wan2.2 TI2V-5B is the one most likely to need a larger GPU. The pins and the licenses are ADR-0008.
+`vae_smoke.ipynb` is the step 2.2 load check. It installs this repo on top of the torch Colab already has, loads each pinned VAE from `subfolder="vae"`, and writes `results/vae-smoke.json`. The install cell removes Colab's torchao 0.10.0, which is too old for Diffusers 0.41.0. A wheel dropped in `/content` installs the package without a token. The T4 measurement is `docs/results/vae-smoke-t4.csv`. HunyuanVideo needed spatial tiling to fit in 16 GB. The pins and the licenses are ADR-0008.
