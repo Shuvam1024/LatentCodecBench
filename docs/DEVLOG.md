@@ -71,3 +71,11 @@ The four VAEs now share one encode/decode object. It does not load weights.
 - CI builds those classes with random weights and narrow blocks. The block width is what got shrunk. The channel count and the downsample schedule are the real ones, because those are what set the grid. `from_pretrained` is patched to raise, and the job sets `HF_HUB_OFFLINE=1`.
 - Diffusers is pinned to 0.41.0. The three class files on tag `v0.41.0` were read before the pin: Wan's scale factors and the group-of-4 encode loop, LTX's `patch * 2^3` formula, Hunyuan's 16 / 8 / 4. ADR-0007. Torch for the extra is the CPU wheel, so the runner is not asked for a CUDA build.
 - The LTX encoder is causal and its decoder is not. The frame rule still follows the encoder. A 32-frame clip is rejected for every model in the set.
+
+## 2026-10-19 — Phase 2.2, checkpoint pins and a VAE-only load
+
+The wrapper can now load the published VAE file, and only that file.
+
+- Each pin is a repo, a revision, and `subfolder="vae"`. The sha256 of `vae/diffusion_pytorch_model.safetensors` is stored next to the revision. All four headers are float32. ADR-0008. `load_vae` calls `from_pretrained` on the VAE class. The transformer is not requested. CI still patches that call so a download fails the job; the load test checks the arguments and does not fetch.
+- Wan2.1 and Wan2.2 TI2V-5B are Apache-2.0. The A14B repo's VAE file has the same sha256 as Wan2.1, so the benchmark loads Wan2.1 for that geometry. LTX `vae/` was last changed on 2024-12-11. The model card maps 2B version 0.9 to the RAIL-M file (academic or research use). The Open Weights License 0.X in that repo covers 0.9.6 and later. Hunyuan's community repo has no license tag; the parent `tencent/HunyuanVideo` license is the Tencent Hunyuan Community License Agreement, which excludes the EU, the UK, and South Korea.
+- `notebooks/vae_smoke.ipynb` installs the repo and Diffusers 0.41.0 on top of the torch already in the runtime, then encodes and decodes one seeded 832×480×33 clip. It writes `results/vae-smoke.json` and a CSV with peak VRAM, encode time, decode time, and PSNR. A T4 loads float16. Capability 8 and above loads bfloat16. An out-of-memory forward turns tiling on, retries once, and records the flag. Wan2.2 TI2V-5B is the file most likely to need more than 16 GB. `docs/learn/07-pins-and-licenses.md`.
