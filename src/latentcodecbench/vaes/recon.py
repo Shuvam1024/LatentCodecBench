@@ -19,7 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -477,8 +477,8 @@ def _tensor_to_unit_rgb(tensor: Any) -> npt.NDArray[np.float64]:
         raise ReconstructionError(
             f"decoded tensor must be (1, 3, frames, height, width), got {got}"
         )
-    moved = np.transpose(array[0], (1, 2, 3, 0)).astype(np.float64)
-    return cast(npt.NDArray[np.float64], moved)
+    moved: npt.NDArray[np.float64] = np.transpose(array[0], (1, 2, 3, 0)).astype(np.float64)
+    return moved
 
 
 def _forward(vae: VideoVae, video: Any, torch: Any) -> tuple[float, float, Any, Any]:
