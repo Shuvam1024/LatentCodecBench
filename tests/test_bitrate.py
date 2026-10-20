@@ -6,7 +6,10 @@ test injects a measurer, the same way the reconstruction tests do.
 
 from __future__ import annotations
 
+import ast
 import importlib
+import inspect
+import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,6 +30,7 @@ from latentcodecbench.vaes.bitrate import (
     run_bitrate,
 )
 from latentcodecbench.vaes.checkpoints import SMOKE_ORDER
+from latentcodecbench.vaes.load import load_vae
 from latentcodecbench.vaes.quantize import (
     BIT_DEPTHS,
     gaussian_cross_entropy_bits,
@@ -35,7 +39,7 @@ from latentcodecbench.vaes.quantize import (
     pixel_rate,
 )
 from latentcodecbench.vaes.scale import denormalize, normalize, published_scale
-from latentcodecbench.vaes.smoke import tiling_flags
+from latentcodecbench.vaes.smoke import runtime_dtype, runtime_dtype_name, tiling_flags
 from latentcodecbench.vaes.wrapper import VideoVae
 
 _MANIFEST = """\
@@ -368,6 +372,118 @@ def test_merge_refuses_a_conflicting_depth(tmp_path: Path, monkeypatch: pytest.M
     changed.write_text(out.read_text(encoding="utf-8").replace("28.0", "29.0", 1), encoding="utf-8")
     with pytest.raises(BitrateError, match="different row"):
         merge_bitrate(changed, dest, config_path=_repo_config())
+
+
+def _sweep_cell_source() -> str:
+    notebook = Path(__file__).resolve().parents[1] / "notebooks" / "vae_bitrate.ipynb"
+    payload = json.loads(notebook.read_text(encoding="utf-8"))
+    for cell in payload["cells"]:
+        source = "".join(cell["source"])
+        if "def loader" in source and "run_bitrate(" in source:
+            return source
+    raise AssertionError("bitrate notebook has no sweep cell")
+
+
+def _bind_call(signature: inspect.Signature, call: ast.Call) -> None:
+    """Raise TypeError when the notebook call does not match the live signature."""
+    kwargs: dict[str, None] = {}
+    for keyword in call.keywords:
+        if keyword.arg is None:
+            raise AssertionError("sweep cell unpacks keyword arguments")
+        kwargs[keyword.arg] = None
+    signature.bind(*([None] * len(call.args)), **kwargs)
+
+
+def test_sweep_cell_calls_match_the_package() -> None:
+    source = _sweep_cell_source()
+    tree = ast.parse(source)
+    signatures = {
+        "runtime_dtype": inspect.signature(runtime_dtype),
+        "runtime_dtype_name": inspect.signature(runtime_dtype_name),
+        "load_vae": inspect.signature(load_vae),
+    }
+    found: dict[str, list[ast.Call]] = {name: [] for name in signatures}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+            continue
+        if node.func.id not in signatures:
+            continue
+        found[node.func.id].append(node)
+        _bind_call(signatures[node.func.id], node)
+    assert found["runtime_dtype"] and found["runtime_dtype_name"] and found["load_vae"]
+    for call in found["runtime_dtype"] + found["runtime_dtype_name"]:
+        assert len(call.args) == 1 and not call.keywords
+        assert isinstance(call.args[0], ast.Name) and call.args[0].id == "torch"
+    for call in found["load_vae"]:
+        keywords = {keyword.arg: keyword.value for keyword in call.keywords}
+        assert "torch_dtype" not in keywords
+        assert isinstance(keywords["dtype"], ast.Name) and keywords["dtype"].id == "dtype"
+        device = keywords["device"]
+        assert isinstance(device, ast.Constant) and device.value == "cuda"
+
+
+def test_sweep_cell_dtype_and_loader_execute(monkeypatch: pytest.MonkeyPatch) -> None:
+    source = _sweep_cell_source()
+    tree = ast.parse(source)
+
+    class _Cuda:
+        def is_available(self) -> bool:
+            return True
+
+        def get_device_capability(self) -> tuple[int, int]:
+            return (8, 9)
+
+    class _Torch:
+        cuda = _Cuda()
+        bfloat16 = "bf16"
+        float16 = "fp16"
+        float32 = "fp32"
+
+    torch = _Torch()
+    dtype: Any = None
+    dtype_name: str | None = None
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+            continue
+        segment = ast.get_source_segment(source, node)
+        assert segment is not None
+        if node.func.id == "runtime_dtype":
+            dtype = eval(segment, {"runtime_dtype": runtime_dtype, "torch": torch})
+        if node.func.id == "runtime_dtype_name":
+            dtype_name = eval(
+                segment,
+                {"runtime_dtype_name": runtime_dtype_name, "torch": torch},
+            )
+    assert dtype == "bf16"
+    assert dtype_name == "bfloat16"
+
+    loader_node = next(
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "loader"
+    )
+    loader_source = ast.get_source_segment(source, loader_node)
+    assert loader_source is not None
+    namespace: dict[str, Any] = {"load_vae": load_vae, "dtype": dtype}
+    exec(loader_source, namespace)
+
+    seen: dict[str, Any] = {}
+
+    class _Module:
+        def eval(self) -> _Module:
+            return self
+
+        def to(self, device: str) -> _Module:
+            seen["device"] = device
+            return self
+
+    def from_pretrained(_repo: str, **kwargs: Any) -> _Module:
+        seen["kwargs"] = kwargs
+        return _Module()
+
+    diffusers = importlib.import_module("diffusers")
+    monkeypatch.setattr(diffusers.AutoencoderKLWan, "from_pretrained", from_pretrained)
+    namespace["loader"]("wan2_1")
+    assert seen["kwargs"]["torch_dtype"] == "bf16"
+    assert seen["device"] == "cuda"
 
 
 def test_notebook_states_the_colab_contract() -> None:
