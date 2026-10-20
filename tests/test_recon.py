@@ -149,6 +149,8 @@ def test_sweep_notebook_states_the_colab_contract() -> None:
     for needle in (
         "torchao",
         "latentcodecbench-*.whl",
+        "--force-reinstall",
+        "latentcodecbench._build_info",
         "/content/results/vae-recon.csv",
         "manifests/clips.yaml",
         "bfloat16",
