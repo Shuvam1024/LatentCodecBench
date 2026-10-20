@@ -8,12 +8,19 @@ in which case tiling is turned on and the clip is tried once more.
 
 Rows are appended to the CSV after each clip, and a ``(clip_id, vae)``
 that is already in the file is skipped. A file from a different config
-is refused. See ADR-0009 and ``docs/results/SCHEMA.md``.
+is refused. Each row has a wall-clock limit: a forward or a score that
+does not finish is logged and the sweep moves on. See ADR-0009 and
+``docs/results/SCHEMA.md``.
 """
 
 from __future__ import annotations
 
 import importlib
+import os
+import signal
+import sys
+import tempfile
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -26,7 +33,13 @@ import numpy.typing as npt
 import yaml
 
 from latentcodecbench.analysis.run import config_sha256, git_sha
-from latentcodecbench.analysis.table import ResultRow, read_results, sort_rows, write_results
+from latentcodecbench.analysis.table import (
+    ResultRow,
+    read_results,
+    sort_rows,
+    transfer_file,
+    write_results,
+)
 from latentcodecbench.data.manifest import load_manifest
 from latentcodecbench.data.y4m import Y4MInfo, read_y4m, write_y4m
 from latentcodecbench.metrics.color import rgb_to_ycbcr, ycbcr_to_rgb
@@ -43,6 +56,10 @@ Runner = Callable[[VideoVae, Path, Path], "ClipReconstruction"]
 
 class ReconstructionError(RuntimeError):
     """The reconstruction sweep could not continue."""
+
+
+class RowTimeout(ReconstructionError):
+    """One row exceeded its wall-clock limit. The sweep continues."""
 
 
 @dataclass(frozen=True)
@@ -165,6 +182,106 @@ def reconstruct_tensor(vae: VideoVae, video: Any) -> TensorReconstruction:
     raise ReconstructionError("reconstruction retry did not return")
 
 
+class _RowWatch:
+    """Log a heartbeat and raise :class:`RowTimeout` when a row runs too long."""
+
+    def __init__(self, label: str, timeout: float, heartbeat: float) -> None:
+        self.label = label
+        self.timeout = timeout
+        self.heartbeat = heartbeat
+        self._stop = threading.Event()
+        self._started = time.monotonic()
+        self._thread: threading.Thread | None = None
+        self._previous: Any = None
+
+    def __enter__(self) -> _RowWatch:
+        if self.heartbeat > 0:
+            self._thread = threading.Thread(target=self._beat, name="row-watchdog", daemon=True)
+            self._thread.start()
+        if self.timeout > 0 and hasattr(signal, "setitimer"):
+            self._previous = signal.signal(signal.SIGALRM, self._handle)
+            signal.setitimer(signal.ITIMER_REAL, self.timeout)
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self._stop.set()
+        if self.timeout > 0 and hasattr(signal, "setitimer"):
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            if self._previous is not None:
+                signal.signal(signal.SIGALRM, self._previous)
+        if self._thread is not None:
+            self._thread.join(timeout=1)
+
+    def _handle(self, _signum: int, _frame: object) -> None:
+        raise RowTimeout(f"{self.label} exceeded {self.timeout:.3g}s")
+
+    def _beat(self) -> None:
+        while not self._stop.wait(self.heartbeat):
+            elapsed = time.monotonic() - self._started
+            print(f"watchdog {self.label} still running t={elapsed:.0f}s", flush=True)
+
+
+def _line_buffered() -> None:
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is None:
+        return
+    try:
+        reconfigure(line_buffering=True)
+    except (OSError, ValueError):
+        return
+
+
+def _is_drive(path: Path) -> bool:
+    text = path.as_posix()
+    return text == "/content/drive" or text.startswith("/content/drive/")
+
+
+def _read_table(path: Path, *, timeout: float) -> list[ResultRow]:
+    """Read a results CSV. A Drive path is copied locally first, with a limit."""
+    if _is_drive(path):
+        descriptor, name = tempfile.mkstemp(prefix="lcb-resume-", suffix=".csv")
+        os.close(descriptor)
+        local = Path(name)
+        try:
+            code = transfer_file(path, local, timeout=timeout)
+            if code == 3:
+                return []
+            if code != 0:
+                raise ReconstructionError(
+                    f"could not read {path}; refusing to replace the rows already stored there"
+                )
+            if not local.is_file() or local.stat().st_size == 0:
+                return []
+            return read_results(local)
+        except (OSError, ValueError) as exc:
+            print(f"resume unreadable {path} ({exc})", flush=True)
+            return []
+        finally:
+            local.unlink(missing_ok=True)
+    if not path.is_file():
+        return []
+    return read_results(path)
+
+
+def _prefer_table(
+    primary: list[ResultRow],
+    primary_path: Path,
+    secondary: list[ResultRow],
+    secondary_path: Path,
+) -> tuple[list[ResultRow], Path]:
+    if not secondary:
+        return primary, primary_path
+    if not primary:
+        return secondary, secondary_path
+    if primary[0].config_sha256 != secondary[0].config_sha256:
+        raise ReconstructionError(
+            f"{primary_path} and {secondary_path} were built from different configs"
+        )
+    if len(secondary) > len(primary):
+        return secondary, secondary_path
+    return primary, primary_path
+
+
 def run_reconstruction(
     *,
     manifest_path: Path,
@@ -180,8 +297,19 @@ def run_reconstruction(
     only: set[str] | None = None,
     now: datetime | None = None,
     runner: Runner | None = None,
+    row_timeout: float = 900.0,
+    heartbeat: float = 60.0,
+    publish_timeout: float = 120.0,
 ) -> list[ResultRow]:
-    """Score each clip with each VAE and write ``out`` after every row."""
+    """Score each clip with each VAE and write ``out`` after every row.
+
+    ``skip clip vae`` is a pair already stored. ``done clip vae t=..s`` is
+    printed after that row has been written. A row that exceeds
+    ``row_timeout`` logs ``timeout`` and the sweep continues. When ``out``
+    is on Google Drive the table is written on local disk and copied across
+    in a child process, so a stuck Drive call can be killed.
+    """
+    _line_buffered()
     manifest = load_manifest(manifest_path)
     names = load_recon_config(config_path)
     if only is not None:
@@ -191,9 +319,22 @@ def run_reconstruction(
             raise ReconstructionError(f"unknown clip id: {', '.join(sorted(missing))}")
     digest = config_sha256(config_path)
     sha = git_sha()
-    existing = read_results(out) if out.is_file() else []
+    work_dir.mkdir(parents=True, exist_ok=True)
+    mirror: Path | None = None
+    journal = out
+    if _is_drive(out):
+        mirror = out
+        journal = work_dir.parent / out.name
+        if _is_drive(journal):
+            journal = Path(tempfile.gettempdir()) / out.name
+    remote_rows = _read_table(mirror, timeout=publish_timeout) if mirror is not None else []
+    local_rows = _read_table(journal, timeout=publish_timeout)
+    existing, source = _prefer_table(local_rows, journal, remote_rows, mirror or journal)
     if existing and existing[0].config_sha256 != digest:
-        raise ReconstructionError(f"{out} was built from a different config; refusing to mix rows")
+        raise ReconstructionError(
+            f"{source} was built from a different config; refusing to mix rows"
+        )
+    print(f"resume {len(existing)} rows from {source}", flush=True)
     if existing:
         run_id = existing[0].run_id
     else:
@@ -202,30 +343,46 @@ def run_reconstruction(
     done = {(row.clip_id, row.codec) for row in existing}
     rows = list(existing)
     active = default_runner if runner is None else runner
-    work_dir.mkdir(parents=True, exist_ok=True)
     for name in names:
-        pending = [
-            clip
-            for clip in manifest.clips
-            if (only is None or clip.id in only) and (clip.id, name) not in done
-        ]
+        pending = []
+        for clip in manifest.clips:
+            if only is not None and clip.id not in only:
+                continue
+            if (clip.id, name) in done:
+                print(f"skip {clip.id} {name}", flush=True)
+                continue
+            pending.append(clip)
         if not pending:
             continue
         vae: VideoVae | None = None
         try:
-            vae = loader(name)
+            try:
+                with _RowWatch(f"load {name}", row_timeout, heartbeat):
+                    vae = loader(name)
+            except RowTimeout:
+                print(f"timeout load {name} after {row_timeout:.3g}s", flush=True)
+                for clip in pending:
+                    print(f"timeout {clip.id} {name} after {row_timeout:.3g}s", flush=True)
+                continue
+            assert vae is not None
             apply_sweep_tiling(name, vae.module)
             revision = CHECKPOINTS[name].revision
             for clip in pending:
-                source = clip_dir / f"{clip.id}.y4m"
-                if not source.is_file():
-                    raise ReconstructionError(f"missing canonical clip {source}")
-                print(f"{clip.id} {name}", flush=True)
+                source_y4m = clip_dir / f"{clip.id}.y4m"
+                if not source_y4m.is_file():
+                    raise ReconstructionError(f"missing canonical clip {source_y4m}")
+                print(f"run {clip.id} {name}", flush=True)
+                started = time.monotonic()
                 try:
-                    measured = active(vae, source, work_dir)
+                    with _RowWatch(f"{clip.id} {name}", row_timeout, heartbeat):
+                        measured = active(vae, source_y4m, work_dir)
+                except RowTimeout:
+                    print(f"timeout {clip.id} {name} after {row_timeout:.3g}s", flush=True)
+                    _release_cuda()
+                    continue
                 except Exception as exc:
                     detail = f"{type(exc).__name__}: {exc}"
-                    print(f"{clip.id} {name} failed: {detail[:500]}", flush=True)
+                    print(f"fail {clip.id} {name} {detail[:500]}", flush=True)
                     _release_cuda()
                     continue
                 rows.append(
@@ -244,11 +401,21 @@ def run_reconstruction(
                     )
                 )
                 done.add((clip.id, name))
-                write_results(out, rows)
+                write_results(journal, rows)
+                published = True
+                if mirror is not None:
+                    published = transfer_file(journal, mirror, timeout=publish_timeout) == 0
+                if not published:
+                    print(f"publish {mirror} timed out; rows stay in {journal}", flush=True)
+                elapsed = time.monotonic() - started
+                print(f"done {clip.id} {name} t={elapsed:.1f}s", flush=True)
         finally:
             vae = None
             _release_cuda()
-    write_results(out, rows)
+    if rows:
+        write_results(journal, rows)
+        if mirror is not None:
+            transfer_file(journal, mirror, timeout=publish_timeout)
     return sort_rows(rows)
 
 
@@ -372,6 +539,7 @@ def _result_row(
         ssim=measured.ssim,
         vmaf=measured.vmaf,
         flicker=measured.flicker,
+        # This pass does not run LPIPS. The column stays empty.
         lpips=None,
         peak_vram_bytes=measured.peak_vram_bytes,
         spatial_tiling=measured.spatial_tiling,
