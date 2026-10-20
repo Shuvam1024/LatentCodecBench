@@ -54,7 +54,7 @@ A pair under 0.75 is still included in the mean BD-rate when the ranges share an
 | `latent_shape` | `channels x frames x height x width`. |
 | `notes` | Empty, or the tiling retry. Hunyuan ran out of memory until spatial tiling was on. Framewise encoding was already on. |
 
-`docs/results/vae-recon.csv` is the reconstruction sweep from step 2.3, once `scripts/merge-vae-recon.py` has copied the Colab file in. One row is one VAE on one clip. The classic columns above are all present, so `read_results` loads the file. `codec` is `wan2_1`, `hunyuan`, `ltx`, or `wan2_2`. `preset` is `reconstruction`. `crf`, `bits`, `bpp`, and `kbps` are empty: this pass does not quantize the latent. `lpips` is empty. Rows are sorted by `clip_id`, then `codec`, then `crf`, and an empty `crf` sorts first.
+`docs/results/vae-recon.csv` is the reconstruction sweep from step 2.3 (136 rows, copied in by `scripts/merge-vae-recon.py`). One row is one VAE on one clip. The classic columns above are all present, so `read_results` loads the file. `codec` is `wan2_1`, `hunyuan`, `ltx`, or `wan2_2`. `preset` is `reconstruction`. `crf`, `bits`, `bpp`, and `kbps` are empty: this pass does not quantize the latent. `lpips` is empty because this config does not score it. Rows are sorted by `clip_id`, then `codec`, then `crf`, and an empty `crf` sorts first.
 
 The config hash is the SHA256 of `configs/vae-recon.yaml`. A second run that sees a different hash leaves the file alone. A `(clip_id, codec)` already in the file is skipped, and the original `run_id` is kept.
 
