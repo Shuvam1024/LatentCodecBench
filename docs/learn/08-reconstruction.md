@@ -14,6 +14,6 @@ Per-chunk time is the mean time spent inside `encoder.forward` on the encode tha
 
 ## Where the 136 rows go
 
-34 clips times four VAEs is 136 rows. The notebook writes `/content/results/vae-recon.csv` after each one and skips a pair it has already stored, so a restarted runtime continues. An L4 runs the weights in bfloat16. A T4 runs them in float16. Torch, Diffusers, the GPU name, and the VAE revision sit on the row, next to the run id `{utc}-{git_sha12}-{config_sha12}`.
+34 clips times four VAEs is 136 rows. The notebook mounts Google Drive and writes `MyDrive/LatentCodecBench/results/vae-recon.csv` after each one, flushing that file before the next forward. A restarted runtime reads it and skips a pair it has already stored. Set `USE_DRIVE` false and the same file is `/content/results/vae-recon.csv`. Canonical clips prepared off Colab (`data/clips/{id}.y4m`) can be uploaded to `LatentCodecBench/clips/` so the fetch does not download the 4K sources again. An L4 runs the weights in bfloat16. A T4 runs them in float16. Torch, Diffusers, the GPU name, and the VAE revision sit on the row, next to the run id `{utc}-{git_sha12}-{config_sha12}`.
 
 `scripts/merge-vae-recon.py` is what copies that CSV into `docs/results/vae-recon.csv` after it is downloaded. The y4m clips, the latents, and the checkpoints stay out of git. ADR-0009 records the tiling rule and the empty rate columns.

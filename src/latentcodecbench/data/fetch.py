@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -37,13 +38,26 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def fetch_clip(clip: ClipSpec, raw_dir: Path, *, timeout: float = 120.0) -> Path:
+def fetch_clip(
+    clip: ClipSpec,
+    raw_dir: Path,
+    *,
+    timeout: float = 120.0,
+    overall_timeout: float = 1200.0,
+    attempts: int = 2,
+) -> Path:
     """Download ``clip`` into ``raw_dir / {id}.src`` and verify its SHA256.
 
     A file that is already present and already matches is kept. A file that
     is present and does not match is deleted and downloaded again. A download
     that does not match is deleted and raises :class:`HashMismatchError`.
+
+    ``timeout`` is the per-read socket timeout. ``overall_timeout`` is the
+    wall-clock budget for one attempt. A stalled or slow transfer is deleted
+    and tried again, up to ``attempts`` times. A hash mismatch is not retried.
     """
+    if attempts < 1:
+        raise ValueError("attempts must be at least 1")
     raw_dir.mkdir(parents=True, exist_ok=True)
     destination = raw_dir / f"{clip.id}.src"
     if destination.exists() and sha256_file(destination) == clip.sha256:
@@ -51,20 +65,33 @@ def fetch_clip(clip: ClipSpec, raw_dir: Path, *, timeout: float = 120.0) -> Path
     if destination.exists():
         destination.unlink()
     temporary = destination.with_suffix(".src.partial")
-    try:
-        _download(clip, temporary, timeout=timeout)
-        actual = sha256_file(temporary)
-        if actual != clip.sha256:
+    last: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            _download(clip, temporary, timeout=timeout, overall_timeout=overall_timeout)
+            actual = sha256_file(temporary)
+            if actual != clip.sha256:
+                temporary.unlink(missing_ok=True)
+                raise HashMismatchError(clip.id, clip.sha256, actual)
+            temporary.replace(destination)
+            return destination
+        except Exception as exc:
             temporary.unlink(missing_ok=True)
-            raise HashMismatchError(clip.id, clip.sha256, actual)
-        temporary.replace(destination)
-    except Exception:
-        temporary.unlink(missing_ok=True)
-        raise
-    return destination
+            last = exc
+            if attempt >= attempts or not _retryable(exc):
+                raise
+            print(f"{clip.id}: attempt {attempt} failed ({exc}); retrying", flush=True)
+    assert last is not None
+    raise last
 
 
-def _download(clip: ClipSpec, destination: Path, *, timeout: float) -> None:
+def _retryable(exc: BaseException) -> bool:
+    if isinstance(exc, HashMismatchError | ValueError | FileNotFoundError):
+        return False
+    return isinstance(exc, TimeoutError | urllib.error.URLError | OSError | RuntimeError)
+
+
+def _download(clip: ClipSpec, destination: Path, *, timeout: float, overall_timeout: float) -> None:
     parsed = urlparse(clip.source_url)
     if parsed.scheme == "file":
         _copy_file(Path(parsed.path), destination, clip)
@@ -78,6 +105,7 @@ def _download(clip: ClipSpec, destination: Path, *, timeout: float) -> None:
     if clip.byte_length is not None:
         end = clip.byte_start + clip.byte_length - 1
         request.add_header("Range", f"bytes={clip.byte_start}-{end}")
+    deadline = time.monotonic() + overall_timeout
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             if clip.byte_length is not None and response.status != 206:
@@ -85,8 +113,7 @@ def _download(clip: ClipSpec, destination: Path, *, timeout: float) -> None:
                     f"{clip.id}: server returned HTTP {response.status} for a byte range. "
                     "Refusing to read an unbounded body."
                 )
-            with destination.open("wb") as handle:
-                shutil.copyfileobj(response, handle, length=1024 * 1024)
+            _read_until(clip, response, destination, deadline, overall_timeout)
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"{clip.id}: download failed with HTTP {exc.code}") from exc
     if clip.byte_length is not None and destination.stat().st_size != clip.byte_length:
@@ -94,6 +121,35 @@ def _download(clip: ClipSpec, destination: Path, *, timeout: float) -> None:
             f"{clip.id}: downloaded {destination.stat().st_size} bytes, "
             f"manifest asks for {clip.byte_length}"
         )
+
+
+def _read_until(
+    clip: ClipSpec,
+    response: object,
+    destination: Path,
+    deadline: float,
+    overall_timeout: float,
+) -> None:
+    read = getattr(response, "read", None)
+    if read is None:
+        raise RuntimeError(f"{clip.id}: download response has no read()")
+    written = 0
+    next_report = 64 * 1024 * 1024
+    with destination.open("wb") as handle:
+        while True:
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"{clip.id}: download exceeded {overall_timeout:.0f}s")
+            chunk = read(1024 * 1024)
+            if not chunk:
+                break
+            if not isinstance(chunk, bytes | bytearray):
+                kind = type(chunk).__name__
+                raise RuntimeError(f"{clip.id}: download returned {kind}, want bytes")
+            handle.write(chunk)
+            written += len(chunk)
+            if written >= next_report:
+                print(f"{clip.id}: downloaded {written // (1024 * 1024)} MiB", flush=True)
+                next_report += 64 * 1024 * 1024
 
 
 def _copy_file(source: Path, destination: Path, clip: ClipSpec) -> None:
