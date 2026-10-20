@@ -128,3 +128,13 @@ The rate-distortion figures stay the classic curves. Those rows have no `crf` an
 | wan2_2 | 35.35 | 34.45 | 87.13 | 90.85 | 9.49 |
 
 Mean time is encode plus decode. The three lowest PSNR-Y clips are `lawn_mower`, `park_joy`, and `crowd_run` for `wan2_1` and `ltx`; `lawn_mower`, `park_joy`, and `red_kayak` for `hunyuan`; `red_kayak`, `park_joy`, and `crowd_run` for `wan2_2`. The lowest VMAF on each VAE is `red_kayak`.
+
+## 2026-10-20 — Phase 2.4, latent bitrate
+
+The reconstruction table has no rate. This change defines the file a posterior mean becomes, and the columns that file fills. The 816 measured rows are not in the commit. They need the VAE, which is a Colab GPU run.
+
+- The published normalization is the one Diffusers 0.41.0 applies around the latent. Wan uses per-channel mean and standard deviation. Hunyuan multiplies by 0.476986. LTX uses the mean and standard deviation stored in the pinned weights, and a `scaling_factor` of 1. The numbers are packaged in `latent_scale.json`.
+- Uniform quantization on `[-4, 4]` at bit depths 2, 4, 6, 8, 10, and 12. Codes are a little-endian integer tensor, `uint8` or `uint16`, then zstd level 3. A 24-byte header is side information and is included in `bits`. `bpp` divides by `width * height * frames`, locked by a unit test on a synthetic latent. `crf` stores the bit depth. `preset` is `zstd`.
+- `entropy_bits` is the cross-entropy of the codes under a factorized standard normal whose parameters were fixed before the clip. These VAEs were trained to reconstruct. A cross-entropy without a bitstream is an entropy estimate, so that number stays out of `bits`.
+- `channels: null` keeps every channel. A later config can code a prefix and hand the decoder zeros for the rest, if the low depths still sit above the classic ladder.
+- `notebooks/vae_bitrate.ipynb` is the GPU driver. `scripts/merge-vae-bitrate.py` copies the CSV back. `lpips` stays empty. ADR-0010. `docs/learn/05-latent-bitrate.md`. `docs/learn/06-a-prior-costs-bits.md`.

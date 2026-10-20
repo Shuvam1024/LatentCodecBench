@@ -1,0 +1,20 @@
+# Latent bitrate. crf is the quantizer bit depth. See ADR-0010.
+version: 1
+kind: vae-bitrate
+vaes:
+  - wan2_1
+  - hunyuan
+  - ltx
+  - wan2_2
+hunyuan_spatial_tiling: true
+bit_depths: [2, 4, 6, 8, 10, 12]
+quant_low: -4.0
+quant_high: 4.0
+zstd_level: 3
+channels: null
+metrics:
+  - psnr_y
+  - psnr_rgb
+  - ssim
+  - vmaf
+  - flicker
