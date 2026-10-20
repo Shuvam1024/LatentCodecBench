@@ -81,6 +81,19 @@ Those are mostly easy clips. SVT-AV1 at CRF 63, the top of its dial, is still cl
 
 Four of the 34 clips (`street_50`, `lawn_mower`, `rust_laser`, `volcano`) were already Theora or VP9, so those rows are a re-encode. Derf and UVG are not. LPIPS is blank in this table: the sweep ran without PyTorch. [ADR-0005](docs/decisions/0005-codec-baselines.md) and [ADR-0006](docs/decisions/0006-rd-curves-and-bd-rate.md) record the knobs and the BD-rate definition.
 
+## VAE reconstruction
+
+The uncoded reconstruction of the same 34 clips is [docs/results/vae-recon.csv](docs/results/vae-recon.csv) (136 rows, one per clip and VAE). No latent is quantized, so `crf`, `bits`, `bpp`, and `kbps` are empty, and the curves above stay the classic codecs. `lpips` is empty because this pass does not score it. Hunyuan ran with spatial tiling on. The other three did not. Runtime is bfloat16 on an NVIDIA L4. Run id `20261020T135251Z-5e6307722225-8af5cb8e9b39`. [ADR-0009](docs/decisions/0009-reconstruction-sweep.md).
+
+Mean time is encode plus decode.
+
+| VAE | Mean PSNR-Y | Median PSNR-Y | Mean VMAF | Median VMAF | Mean time (s) |
+| --- | --- | --- | --- | --- | --- |
+| wan2_1 | 34.57 | 34.10 | 86.40 | 89.21 | 10.76 |
+| hunyuan | 35.11 | 34.96 | 87.63 | 89.69 | 24.54 |
+| ltx | 32.30 | 31.98 | 74.56 | 78.62 | 0.88 |
+| wan2_2 | 35.35 | 34.45 | 87.13 | 90.85 | 9.49 |
+
 ## Quickstart
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:

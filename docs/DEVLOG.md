@@ -99,13 +99,32 @@ Wan2.2 printed `config attributes {'clip_output': False} ... will be ignored`. T
 
 ## 2026-10-19 — Phase 2.3, the reconstruction sweep
 
-The Colab notebook that scores the real clips is in place. The 136 rows are not. This change is the driver, the schema, and the merge script. The sweep itself runs on the user's GPU.
+The Colab notebook that scores the real clips is in place. This change is the driver, the schema, and the merge script. The measured table is the next entry.
 
 - `notebooks/vae_sweep.ipynb` uninstalls torchao, installs a wheel from `/content` when one is there, and otherwise installs the git ref. It fetches the 34 clips through `fetch_clip` and `preprocess_clip`, so the manifest SHA256 is checked, and it scores each clip with the Phase 1 metrics against the source y4m. The pinned ffmpeg is the September build from ADR-0003. Output is `/content/results/vae-recon.csv`, written after every row. A `(clip_id, vae)` already in the file is skipped.
 - HunyuanVideo calls `enable_tiling()` before the first clip. The T4 smoke is why. The other three stay untiled unless a forward runs out of memory, then that clip is retried once. The flags, peak VRAM, encode time, decode time, and the mean `encoder.forward` time are columns. An L4 runs bfloat16. A T4 runs float16. ADR-0009. `docs/learn/08-reconstruction.md`.
 - The classic reader loads the file. `crf`, `bits`, `bpp`, and `kbps` are empty. The VAE columns are omitted from a classic CSV, so the Phase 1 table is unchanged. `configs/vae-recon.yaml` is the hashed config, and the same bytes are packaged as `latentcodecbench/vaes/recon_config.yaml` because a wheel does not contain `configs/`. `manifests/clips.yaml` is not in the wheel.
-- `scripts/merge-vae-recon.py` copies an uploaded CSV into `docs/results/vae-recon.csv`. It refuses a different config hash, a filled-in rate column, and a Hunyuan row with spatial tiling off. The results file stays out of this PR.
+- `scripts/merge-vae-recon.py` copies an uploaded CSV into `docs/results/vae-recon.csv`. It refuses a different config hash, a filled-in rate column, and a Hunyuan row with spatial tiling off.
 - `fetch_clip` sends `User-Agent: LatentCodecBench/<version> (https://github.com/Shuvam1024/LatentCodecBench)`, because upload.wikimedia.org rejects Python's default agent with HTTP 403 (`street_50`, `lawn_mower`, `rust_laser`, `volcano`).
 - A local wheel is installed with `--force-reinstall --no-deps`. `pip install --upgrade` was skipping a rebuilt `0.0.1`, so the session kept the previous code. The hatch hook writes `git rev-parse HEAD` into `latentcodecbench._build_info.GIT_SHA` for that wheel and restores the empty source file afterwards. The sweep reads the recorded commit. `GIT_SHA` in the cell, and `LATENTCODECBENCH_GIT_SHA`, still override it.
 - The sweep mounts Google Drive at `/content/drive/MyDrive/LatentCodecBench/` unless `USE_DRIVE` is set false. Canonical clips prepared off Colab live at `data/clips/{id}.y4m` (flat, 832×480, 33 frames, yuv420p). The same filenames under `LatentCodecBench/clips/` are copied into `/content/data/clips` before fetch, so a file already there is not downloaded. `life`, `shaken_dry`, and `bosphorus` are the downloads that were dropping the runtime. `fetch_clip` now gives each attempt a 1200s wall clock and retries once. The CSV is `LatentCodecBench/results/vae-recon.csv`, rewritten and flushed after every row. A restart skips `(clip_id, vae)` pairs already in that file.
 - A Colab L4 run printed `crowd_run wan2_1` through `rush_field_cuts wan2_1` and then went silent, while the Drive CSV already held all 34 `wan2_1` rows and the first 14 `hunyuan` rows. The log line was printed before the forward, a finished row was never confirmed, and a pair already stored was not mentioned. The CSV is rewritten sorted by clip id, so its order is not the log order. `life` is a finished `wan2_1` row; the next pair is `controlled_burn hunyuan`. `lpips` is empty because this pass does not compute it. `fsync` and `os.replace` on the Drive FUSE mount can block with no traceback. The sweep now prints `resume`, `skip`, `run`, and `done clip vae t=..s`, writes the table on local disk, copies it to Drive in a child that can be killed, and a per-row watchdog logs a heartbeat and moves on when the row exceeds 900s.
+
+## 2026-10-20 — Phase 2.3, the L4 reconstruction table
+
+`docs/results/vae-recon.csv` now holds the finished sweep: 136 rows, 34 clips times `wan2_1`, `hunyuan`, `ltx`, and `wan2_2`. `scripts/merge-vae-recon.py` copied the Colab file. The config hash matches `configs/vae-recon.yaml`. Rate columns stay empty. Hunyuan is spatially tiled on every row; the other three are not, and no row was retried. Every row is bfloat16 on an NVIDIA L4.
+
+`lpips` is blank on every row because step 2.3 does not score it. `configs/vae-recon.yaml` lists `psnr_y`, `psnr_rgb`, `ssim`, `vmaf`, and `flicker`. The row builder writes `lpips` as empty even when torch is installed. ADR-0004 keeps LPIPS out of the default environment.
+
+The run id is `20261020T135251Z-5e6307722225-8af5cb8e9b39`. It was minted on `5e63077`. The 34 `wan2_1` rows and the first 14 `hunyuan` rows still record that commit. The remaining 88 rows, written after the logging change, record `67da1f4`. One run, one config.
+
+The rate-distortion figures stay the classic curves. Those rows have no `crf` and no `bpp`, so `lcb plot rd` would skip every one of them.
+
+| VAE | Mean PSNR-Y | Median PSNR-Y | Mean VMAF | Median VMAF | Mean time (s) |
+| --- | --- | --- | --- | --- | --- |
+| wan2_1 | 34.57 | 34.10 | 86.40 | 89.21 | 10.76 |
+| hunyuan | 35.11 | 34.96 | 87.63 | 89.69 | 24.54 |
+| ltx | 32.30 | 31.98 | 74.56 | 78.62 | 0.88 |
+| wan2_2 | 35.35 | 34.45 | 87.13 | 90.85 | 9.49 |
+
+Mean time is encode plus decode. The three lowest PSNR-Y clips are `lawn_mower`, `park_joy`, and `crowd_run` for `wan2_1` and `ltx`; `lawn_mower`, `park_joy`, and `red_kayak` for `hunyuan`; `red_kayak`, `park_joy`, and `crowd_run` for `wan2_2`. The lowest VMAF on each VAE is `red_kayak`.
