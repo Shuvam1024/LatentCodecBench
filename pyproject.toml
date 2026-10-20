@@ -66,6 +66,8 @@ explicit = true
 [tool.uv.sources]
 torch = { index = "pytorch-cpu" }
 
+[tool.hatch.build.hooks.custom]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/latentcodecbench"]
 

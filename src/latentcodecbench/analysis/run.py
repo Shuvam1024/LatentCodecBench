@@ -14,6 +14,7 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+from latentcodecbench import _build_info
 from latentcodecbench.analysis.config import RunConfig, load_config
 from latentcodecbench.analysis.table import ResultRow, read_results, write_results
 from latentcodecbench.codecs.baseline import encode_y4m
@@ -27,9 +28,16 @@ class RunError(RuntimeError):
 
 
 def git_sha() -> str:
+    """Revision of this run.
+
+    ``LATENTCODECBENCH_GIT_SHA`` wins. A wheel's recorded commit is next,
+    then ``git rev-parse HEAD``.
+    """
     override = os.environ.get("LATENTCODECBENCH_GIT_SHA")
     if override:
         return override
+    if _build_info.GIT_SHA:
+        return _build_info.GIT_SHA
     completed = subprocess.run(
         ["git", "rev-parse", "HEAD"],
         check=False,
