@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import time
 import urllib.request
 from pathlib import Path
 
@@ -120,3 +121,93 @@ def test_https_download_sends_a_descriptive_user_agent(
     header = captured[0].get_header("User-agent")
     expected = f"LatentCodecBench/{__version__} (https://github.com/Shuvam1024/LatentCodecBench)"
     assert header == expected
+
+
+def _https_clip(digest: str) -> ClipSpec:
+    return ClipSpec(
+        id="life",
+        source_url="https://media.xiph.org/video/derf/y4m/life_1080p30.y4m",
+        sha256=digest,
+        license="Xiph derf (freely redistributable)",
+        license_url="https://media.xiph.org/video/derf/",
+        native_width=1920,
+        native_height=1080,
+        native_fps_num=30,
+        native_fps_den=1,
+        category="nature",
+    )
+
+
+def test_overall_timeout_retries_then_keeps_the_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = b"life-bytes"
+    digest = hashlib.sha256(payload).hexdigest()
+    calls = {"n": 0}
+
+    class _Body:
+        status = 200
+
+        def __init__(self, slow: bool) -> None:
+            self._slow = slow
+            self._buffer = io.BytesIO(payload)
+
+        def read(self, size: int = -1) -> bytes:
+            if self._slow:
+                time.sleep(0.2)
+                return b"x"
+            return self._buffer.read(size)
+
+        def __enter__(self) -> _Body:
+            return self
+
+        def __exit__(self, *_exc: object) -> None:
+            return None
+
+    def fake_urlopen(request: urllib.request.Request, timeout: float = 120.0) -> _Body:
+        calls["n"] += 1
+        assert timeout == 5.0
+        return _Body(slow=calls["n"] == 1)
+
+    monkeypatch.setattr("latentcodecbench.data.fetch.urllib.request.urlopen", fake_urlopen)
+    fetched = fetch_clip(
+        _https_clip(digest),
+        tmp_path / "raw",
+        timeout=5.0,
+        overall_timeout=0.05,
+        attempts=2,
+    )
+    assert calls["n"] == 2
+    assert fetched.read_bytes() == payload
+    assert not (tmp_path / "raw" / "life.src.partial").exists()
+
+
+def test_overall_timeout_stops_after_the_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = {"n": 0}
+
+    class _Body:
+        status = 200
+
+        def read(self, size: int = -1) -> bytes:
+            time.sleep(0.05)
+            return b"x"
+
+        def __enter__(self) -> _Body:
+            return self
+
+        def __exit__(self, *_exc: object) -> None:
+            return None
+
+    def fake_urlopen(request: urllib.request.Request, timeout: float = 120.0) -> _Body:
+        calls["n"] += 1
+        return _Body()
+
+    monkeypatch.setattr("latentcodecbench.data.fetch.urllib.request.urlopen", fake_urlopen)
+    raw = tmp_path / "raw"
+    with pytest.raises(TimeoutError, match="exceeded"):
+        fetch_clip(_https_clip("a" * 64), raw, timeout=1.0, overall_timeout=0.01, attempts=2)
+    assert calls["n"] == 2
+    assert not (raw / "life.src").exists()
+    assert not (raw / "life.src.partial").exists()

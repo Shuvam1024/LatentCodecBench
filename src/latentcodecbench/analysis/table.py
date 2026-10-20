@@ -10,6 +10,8 @@ empty CRF sorts first. See ``docs/results/SCHEMA.md``.
 from __future__ import annotations
 
 import csv
+import os
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -105,10 +107,16 @@ def sort_rows(rows: list[ResultRow]) -> list[ResultRow]:
 
 
 def write_results(path: Path, rows: list[ResultRow]) -> None:
+    """Rewrite ``path`` and flush it.
+
+    The new bytes land in a sibling ``*.partial`` file first. A reader keeps
+    the previous table until that file is flushed and renamed into place.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     ordered = sort_rows(rows)
     fieldnames = COLUMNS + VAE_COLUMNS if _uses_vae_columns(ordered) else COLUMNS
-    with path.open("w", encoding="utf-8", newline="") as handle:
+    temporary = path.with_name(path.name + ".partial")
+    with temporary.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
             handle,
             fieldnames=fieldnames,
@@ -118,6 +126,10 @@ def write_results(path: Path, rows: list[ResultRow]) -> None:
         writer.writeheader()
         for row in ordered:
             writer.writerow(_to_dict(row))
+        handle.flush()
+        with suppress(OSError):
+            os.fsync(handle.fileno())
+    os.replace(temporary, path)
 
 
 def read_results(path: Path) -> list[ResultRow]:
