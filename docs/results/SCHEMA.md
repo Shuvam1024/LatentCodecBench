@@ -73,3 +73,7 @@ The config hash is the SHA256 of `configs/vae-recon.yaml`. A second run that see
 | `latent_shape` | `channels x frames x height x width`, without the batch axis. |
 
 `docs/results/vae-smoke-t4.csv` is a different file. Its PSNR uses a peak of 2 on noise. The reconstruction table uses the Phase 1 metrics on the canonical clips.
+
+`docs/results/vae-bitrate.csv` is the latent-bitrate sweep from step 2.4, once `scripts/merge-vae-bitrate.py` has copied the Colab file in. One row is one VAE, one clip, and one bit depth. `codec` is the VAE name. `preset` is `zstd`. `crf` is the quantizer bit depth: 2, 4, 6, 8, 10, or 12. It is not an x264 CRF. `bits` is eight times the length of the 24-byte header plus the zstd payload. `bpp` is `bits / (width * height * frames)`. `kbps` uses the clip frame rate. `entropy_bits` is the factorized standard-normal cross-entropy of the codes, in bits. It is an estimate, not a file size, and it is not added into `bits`. `lpips` is empty. The VAE columns match the reconstruction table. ADR-0010.
+
+The config hash is the SHA256 of `configs/vae-bitrate.yaml`. A second run that sees a different hash leaves the file alone. A `(clip_id, codec, crf)` already in the file is skipped.

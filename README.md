@@ -94,6 +94,8 @@ Mean time is encode plus decode.
 | ltx | 32.30 | 31.98 | 74.56 | 78.62 | 0.88 |
 | wan2_2 | 35.35 | 34.45 | 87.13 | 90.85 | 9.49 |
 
+The bitrate of those latents is a separate table. `configs/vae-bitrate.yaml` quantizes the normalized posterior mean at bit depths 2, 4, 6, 8, 10, and 12, compresses the integer codes with zstd, and fills `crf`, `bits`, `bpp`, and `kbps`. `crf` there is the bit depth. The 816 rows are the Colab notebook `notebooks/vae_bitrate.ipynb`. [ADR-0010](docs/decisions/0010-latent-bitrate.md).
+
 ## Quickstart
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:

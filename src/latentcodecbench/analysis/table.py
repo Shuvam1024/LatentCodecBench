@@ -58,6 +58,7 @@ VAE_COLUMNS: tuple[str, ...] = (
     "gpu_name",
     "vae_revision",
     "latent_shape",
+    "entropy_bits",
 )
 
 
@@ -101,6 +102,7 @@ class ResultRow:
     gpu_name: str | None = None
     vae_revision: str | None = None
     latent_shape: str | None = None
+    entropy_bits: float | None = None
 
 
 def sort_rows(rows: list[ResultRow]) -> list[ResultRow]:
@@ -246,6 +248,7 @@ def _from_dict(raw: dict[str, str]) -> ResultRow:
         gpu_name=_optional_text(_cell(raw, "gpu_name")),
         vae_revision=_optional_text(_cell(raw, "vae_revision")),
         latent_shape=_optional_text(_cell(raw, "latent_shape")),
+        entropy_bits=_optional_float(_cell(raw, "entropy_bits")),
     )
 
 
