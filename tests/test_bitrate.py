@@ -486,9 +486,53 @@ def test_sweep_cell_dtype_and_loader_execute(monkeypatch: pytest.MonkeyPatch) ->
     assert seen["device"] == "cuda"
 
 
+def _joined_string(node: ast.expr) -> str:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        return _joined_string(node.left) + _joined_string(node.right)
+    raise AssertionError("pinned ffmpeg URL is not a string constant")
+
+
+def _ffmpeg_cell_source() -> str:
+    notebook = Path(__file__).resolve().parents[1] / "notebooks" / "vae_bitrate.ipynb"
+    payload = json.loads(notebook.read_text(encoding="utf-8"))
+    ffmpeg_at: int | None = None
+    sweep_at: int | None = None
+    source = ""
+    for index, cell in enumerate(payload["cells"]):
+        cell_source = "".join(cell["source"])
+        if "FFMPEG_SHA256" in cell_source and "LATENTCODECBENCH_FFMPEG" in cell_source:
+            ffmpeg_at = index
+            source = cell_source
+        if "run_bitrate(" in cell_source:
+            sweep_at = index
+    if ffmpeg_at is None or sweep_at is None or ffmpeg_at >= sweep_at:
+        raise AssertionError("pinned ffmpeg cell must run before the bitrate sweep")
+    return source
+
+
+def _pinned_ffmpeg() -> tuple[str, str]:
+    script = Path(__file__).resolve().parents[1] / "scripts" / "install-ffmpeg.sh"
+    text = script.read_text(encoding="utf-8")
+    url = next(
+        line.split("=", 1)[1].strip().strip('"')
+        for line in text.splitlines()
+        if line.startswith("url=")
+    )
+    sha = next(
+        line.split("=", 1)[1].strip().strip('"')
+        for line in text.splitlines()
+        if line.startswith("sha256=")
+    )
+    return url, sha
+
+
 def test_notebook_states_the_colab_contract() -> None:
     notebook = Path(__file__).resolve().parents[1] / "notebooks" / "vae_bitrate.ipynb"
     text = notebook.read_text(encoding="utf-8")
+    url, sha = _pinned_ffmpeg()
+    ffmpeg = _ffmpeg_cell_source()
     for needle in (
         "torchao",
         "--force-reinstall",
@@ -500,8 +544,40 @@ def test_notebook_states_the_colab_contract() -> None:
         "/content/drive/MyDrive/LatentCodecBench",
         "scripts/merge-vae-bitrate.py",
         "configs/vae-bitrate.yaml",
+        "LATENTCODECBENCH_FFMPEG",
+        "libvmaf",
+        "n9.0.2",
+        sha,
     ):
         assert needle in text
+    assert url.startswith("https://github.com/BtbN/FFmpeg-Builds/")
+    tree = ast.parse(ffmpeg)
+    assigned: dict[str, ast.expr] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if isinstance(target, ast.Name):
+            assigned[target.id] = node.value
+    sha_node = assigned["FFMPEG_SHA256"]
+    assert isinstance(sha_node, ast.Constant) and sha_node.value == sha
+    assert _joined_string(assigned["FFMPEG_URL"]) == url
+    env_name = None
+    checks_libvmaf = False
+    for walked in ast.walk(tree):
+        if (
+            isinstance(walked, ast.Assign)
+            and len(walked.targets) == 1
+            and isinstance(walked.targets[0], ast.Subscript)
+            and isinstance(walked.targets[0].slice, ast.Constant)
+        ):
+            env_name = walked.targets[0].slice.value
+        if isinstance(walked, ast.Compare):
+            pieces = [walked.left, *walked.comparators]
+            if any(isinstance(item, ast.Constant) and item.value == "libvmaf" for item in pieces):
+                checks_libvmaf = True
+    assert env_name == "LATENTCODECBENCH_FFMPEG"
+    assert checks_libvmaf
 
 
 def quantize_nearest(values: np.ndarray, bit_depth: int) -> np.ndarray:
