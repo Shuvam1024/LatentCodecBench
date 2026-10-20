@@ -8,13 +8,15 @@ from __future__ import annotations
 
 import importlib
 import os
+import subprocess
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from latentcodecbench.analysis.table import read_results
+from latentcodecbench.analysis.table import read_results, transfer_file
 from latentcodecbench.data.manifest import load_manifest
 from latentcodecbench.vaes import GEOMETRIES
 from latentcodecbench.vaes.checkpoints import SMOKE_ORDER
@@ -151,6 +153,9 @@ def test_sweep_notebook_states_the_colab_contract() -> None:
         "latentcodecbench-*.whl",
         "--force-reinstall",
         "latentcodecbench._build_info",
+        "skip crowd_run wan2_1",
+        "done crowd_run wan2_1",
+        "timeout",
         "/content/results/vae-recon.csv",
         "/content/drive/MyDrive/LatentCodecBench",
         "data/clips/{id}.y4m",
@@ -261,6 +266,94 @@ def test_sweep_resumes_and_leaves_rate_columns_empty(
     )
     assert calls == []
     assert again[0].run_id == rows[0].run_id
+
+
+def test_watchdog_logs_a_hung_row_and_continues(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("LATENTCODECBENCH_GIT_SHA", "b" * 40)
+    manifest = _write_manifest(tmp_path, ["bad", "good"])
+
+    def runner(vae: VideoVae, source: Path, _work: Path) -> ClipReconstruction:
+        if source.stem == "bad" and vae.geometry.name == "wan2_1":
+            time.sleep(5)
+        return _measured(vae)
+
+    rows = run_reconstruction(
+        manifest_path=manifest,
+        config_path=_repo_config(),
+        clip_dir=tmp_path / "clips",
+        out=tmp_path / "vae-recon.csv",
+        work_dir=tmp_path / "work",
+        loader=_loader,
+        torch_version="2.14.1",
+        diffusers_version="0.41.0",
+        runtime_dtype="bfloat16",
+        gpu_name="NVIDIA L4",
+        runner=runner,
+        row_timeout=0.4,
+        heartbeat=0.1,
+    )
+    text = capsys.readouterr().out
+    assert "timeout bad wan2_1 after 0.4s" in text
+    assert "watchdog bad wan2_1 still running" in text
+    assert "done good wan2_1 t=" in text
+    assert "skip bad wan2_1" not in text
+    stored = {(row.clip_id, row.codec) for row in rows}
+    assert ("bad", "wan2_1") not in stored
+    assert ("good", "wan2_1") in stored
+    assert len(rows) == 7
+
+
+def test_resume_logs_each_stored_pair(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("LATENTCODECBENCH_GIT_SHA", "c" * 40)
+    manifest = _write_manifest(tmp_path, ["beta"])
+    out = tmp_path / "vae-recon.csv"
+    kwargs: dict[str, Any] = {
+        "manifest_path": manifest,
+        "config_path": _repo_config(),
+        "clip_dir": tmp_path / "clips",
+        "out": out,
+        "work_dir": tmp_path / "work",
+        "loader": _loader,
+        "torch_version": "2.14.1",
+        "diffusers_version": "0.41.0",
+        "runtime_dtype": "bfloat16",
+        "gpu_name": "NVIDIA L4",
+        "runner": lambda vae, _source, _work: _measured(vae),
+        "heartbeat": 0,
+    }
+    run_reconstruction(**kwargs)
+    capsys.readouterr()
+    run_reconstruction(**kwargs)
+    text = capsys.readouterr().out
+    assert "resume 4 rows" in text
+    assert "skip beta wan2_1" in text
+    assert "skip beta hunyuan" in text
+    assert "done " not in text
+
+
+def test_transfer_file_copies_and_kills_a_stuck_child(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "src.csv"
+    source.write_text("hello", encoding="utf-8")
+    dest = tmp_path / "nested" / "dest.csv"
+    assert transfer_file(source, dest, timeout=5) == 0
+    assert dest.read_text(encoding="utf-8") == "hello"
+    assert transfer_file(tmp_path / "missing.csv", dest, timeout=5) == 3
+
+    real_popen = subprocess.Popen
+
+    def hang(*_args: object, **_kwargs: object) -> subprocess.Popen[bytes]:
+        return real_popen(["sleep", "30"], start_new_session=True)
+
+    monkeypatch.setattr("latentcodecbench.analysis.table.subprocess.Popen", hang)
+    started = time.monotonic()
+    assert transfer_file(source, dest, timeout=0.3) is None
+    assert time.monotonic() - started < 2
 
 
 def test_a_failed_clip_is_skipped_and_a_different_config_is_refused(

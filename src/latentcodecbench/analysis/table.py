@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import csv
 import os
+import subprocess
+import sys
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -130,6 +132,44 @@ def write_results(path: Path, rows: list[ResultRow]) -> None:
         with suppress(OSError):
             os.fsync(handle.fileno())
     os.replace(temporary, path)
+
+
+_TRANSFER = """
+import os
+import shutil
+import sys
+
+source, dest = sys.argv[1], sys.argv[2]
+if not os.path.isfile(source):
+    sys.exit(3)
+parent = os.path.dirname(dest)
+if parent:
+    os.makedirs(parent, exist_ok=True)
+temporary = dest + ".partial"
+shutil.copyfile(source, temporary)
+os.replace(temporary, dest)
+"""
+
+
+def transfer_file(source: Path, dest: Path, *, timeout: float) -> int | None:
+    """Copy ``source`` onto ``dest`` in a child process.
+
+    Returns 0 when the copy lands, 3 when ``source`` is missing, another
+    code when the child fails, and ``None`` when ``timeout`` elapses. The
+    child is killed on timeout so a stuck filesystem call does not hold
+    the caller.
+    """
+    proc = subprocess.Popen(
+        [sys.executable, "-c", _TRANSFER, str(source), str(dest)],
+        start_new_session=True,
+    )
+    try:
+        return proc.wait(timeout)
+    except subprocess.TimeoutExpired:
+        with suppress(OSError):
+            os.killpg(proc.pid, 9)
+        proc.wait()
+        return None
 
 
 def read_results(path: Path) -> list[ResultRow]:
