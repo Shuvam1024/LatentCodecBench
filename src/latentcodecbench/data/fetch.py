@@ -9,7 +9,12 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
+from latentcodecbench import __version__
 from latentcodecbench.data.manifest import ClipSpec
+
+# upload.wikimedia.org answers Python's default agent with HTTP 403.
+# https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy
+_USER_AGENT = f"LatentCodecBench/{__version__} (https://github.com/Shuvam1024/LatentCodecBench)"
 
 
 class HashMismatchError(RuntimeError):
@@ -69,7 +74,7 @@ def _download(clip: ClipSpec, destination: Path, *, timeout: float) -> None:
         return
     if parsed.scheme not in {"http", "https"}:
         raise ValueError(f"{clip.id}: unsupported URL scheme {parsed.scheme!r}")
-    request = urllib.request.Request(clip.source_url)
+    request = urllib.request.Request(clip.source_url, headers={"User-Agent": _USER_AGENT})
     if clip.byte_length is not None:
         end = clip.byte_start + clip.byte_length - 1
         request.add_header("Range", f"bytes={clip.byte_start}-{end}")
