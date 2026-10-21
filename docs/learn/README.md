@@ -13,3 +13,4 @@ Short notes for interview prep. Each one is about a page, in plain language, and
 | [06 — A prior costs bits](06-a-prior-costs-bits.md) | A fixed unit normal, why its cross-entropy is an estimate, and the channel knob |
 | [07 — Pins, licenses, and loading only the VAE](07-pins-and-licenses.md) | A revision plus `subfolder="vae"`, the license on each weight file, and which file is large for a 16 GB card |
 | [08 — Reconstruction, before a bitrate](08-reconstruction.md) | Phase 1 metrics on the real clips, Hunyuan tiled from the start, and why the rate columns are empty |
+| [09 — The VAEs on the same axes as x264](09-vae-rd-curves.md) | BD-rate against the classic ladder, the depth-2 cut, the plateau near 8 bits, and LTX's lower ceiling |

@@ -96,6 +96,14 @@ Mean time is encode plus decode.
 
 The bitrate of those latents is [docs/results/vae-bitrate.csv](docs/results/vae-bitrate.csv) (816 rows, six bit depths on each clip and VAE). `configs/vae-bitrate.yaml` quantizes the normalized posterior mean at bit depths 2, 4, 6, 8, 10, and 12, compresses the integer codes with zstd, and fills `crf`, `bits`, `bpp`, and `kbps`. `crf` there is the bit depth. `lpips` is empty. `entropy_bits` is a cross-entropy estimate and is not added into `bits`. Quality levels off from about depth 8. The per-depth means are in [docs/learn/05-latent-bitrate.md](docs/learn/05-latent-bitrate.md). Run id `20261020T234203Z-8cb0b7cd9bc4-17ec7df8f1e6`. Runtime is bfloat16 on an NVIDIA L4. [ADR-0010](docs/decisions/0010-latent-bitrate.md).
 
+## VAE rate-distortion
+
+The same rows against the Phase 1 codecs, with the Phase 1 PCHIP. Depth 2 is left out of the integral. A clip whose curves do not overlap, or whose quality falls as the rate rises, is undefined rather than extrapolated. Mean BD-rate against x264 on PSNR-Y: Wan2.1 +824.24% (33 clips, mean overlap 32.27%), Hunyuan +725.09% (32, 35.30%), Wan2.2 +628.61% (33, 42.94%), LTX +397.92% (26, 20.30%). Every one of those PSNR pairs is under 75% overlap. The full table, including x265 and SVT-AV1, is [docs/learn/09-vae-rd-curves.md](docs/learn/09-vae-rd-curves.md). [ADR-0011](docs/decisions/0011-vae-bd-rate.md).
+
+![Mean PSNR-Y, classic codecs and VAEs](docs/results/rd-psnr.png)
+
+![Mean VMAF, classic codecs and VAEs](docs/results/rd-vmaf.png)
+
 ## Quickstart
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
