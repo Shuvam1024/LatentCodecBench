@@ -475,13 +475,20 @@ def test_notebook_keeps_results_local_and_copies_drive_separately() -> None:
     assert "artifact-propagation.csv" in text
     assert "canonical-clips.tar" in text
     assert "LatentCodecBench" in text
-    assert "google-api-python-client" in code
+    install = next(
+        "".join(cell["source"])
+        for cell in code_cells
+        if "diffusers==0.41.0" in "".join(cell["source"])
+    )
+    assert "google-api-python-client" not in install
+    assert "google-auth" not in install
     assert "resume_local" in code
-    assert "upload_file" in code
+    assert "push_local_csv" in code
+    assert "refresh_colab_credentials" in code
     assert "shuvam1024/phase-3-artifact-propagation" in text
     assert "files.download" in code
     needles = [
-        "google-api-python-client",
+        "diffusers==0.41.0",
         "FFMPEG_SHA256",
         "authenticate_user",
         "degrade_sources(",
@@ -516,6 +523,40 @@ def test_notebook_keeps_results_local_and_copies_drive_separately() -> None:
             if isinstance(child, ast.ImportFrom) and child.module == "google.colab.auth":
                 nested = True
     assert nested
+    drive_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+    ]
+    default_call = next(
+        node
+        for node in drive_calls
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "default"
+    )
+    refresh_call = next(
+        node
+        for node in drive_calls
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "refresh"
+    )
+    scope_kw = next(keyword for keyword in default_call.keywords if keyword.arg == "scopes")
+    assert isinstance(scope_kw.value, ast.List)
+    assert len(scope_kw.value.elts) == 1
+    scope_name = scope_kw.value.elts[0]
+    assert isinstance(scope_name, ast.Name) and scope_name.id == "DRIVE_SCOPE"
+    writes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "write_authorized_user"
+    ]
+    assert default_call.lineno < refresh_call.lineno < writes[0].lineno
+    sweep = next(
+        "".join(cell["source"]) for cell in code_cells if "def loader" in "".join(cell["source"])
+    )
+    assert "push_local_csv" in sweep
+    assert "refresh=refresh_colab_credentials" in sweep
+    assert sweep.index("push(LOCAL_RESULTS)") < sweep.index("run_propagation(")
     script = (root / "scripts" / "install-ffmpeg.sh").read_text(encoding="utf-8")
     sha = next(
         line.split("=", 1)[1].strip().strip('"')

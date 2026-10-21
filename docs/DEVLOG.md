@@ -168,3 +168,11 @@ The first notebook copy looked for `/content/drive`. A fresh runtime does not ha
 - Clean clips come from `/content/data/clips`, or from `My Drive/LatentCodecBench/canonical-clips.tar` downloaded through the Drive API. The nine degraded variants are encoded on the Colab disk with the pinned ffmpeg.
 - `My Drive/LatentCodecBench/results/artifact-propagation.csv` is downloaded at startup and merged by `(clip_id, vae, source_codec, source_crf)`. The local row wins. After each new row that same Drive file is updated by file id, in a child process with a timeout.
 - Credentials are `/content/latentcodecbench/drive-credentials.json`. The account prompt runs when that file is missing. Restart session reuses it. If auth is unavailable the sweep logs that and keeps the local CSV.
+
+## 2026-10-21 — Phase 3.1, Colab Drive auth
+
+On a stock Colab L4, upgrading `google-auth` made `google.colab.auth` raise `AttributeError: CredentialsWithRegionalAccessBoundary`. Saving `google.auth.default()` before `refresh(Request())` then raised `ValueError: credentials have no token`, and the next run of the cell did not prompt.
+
+- The install cell no longer pip-installs or upgrades `google-auth` or `google-api-python-client`. Colab's preinstalled copies are the ones the notebook uses.
+- Cell 3 calls `authenticate_user`, then `google.auth.default` with the Drive scope, then `credentials.refresh(Request())`, and saves the access token for the upload child.
+- The sweep re-reads that file on every row. A rejected token is dropped and refreshed in-process once. Re-run cell 3, then re-run the sweep: finished rows are skipped, and the local CSV is uploaded in full, including rows that were only on local disk.

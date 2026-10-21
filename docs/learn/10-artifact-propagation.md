@@ -52,7 +52,7 @@ The resume key is `(clip_id, vae, source_codec, source_crf)`. A key on both side
 
 Clean clips are the y4m files already in `/content/data/clips`. When that directory is empty, the notebook downloads `My Drive/LatentCodecBench/canonical-clips.tar` and extracts it, then encodes the nine degraded variants on the Colab disk. The pinned ffmpeg is already installed for that encode.
 
-Credentials are `/content/latentcodecbench/drive-credentials.json`. The first start asks for one Google account. Restart session keeps `/content`, so the next start loads the file and does not ask again. A new VM asks once more. If the prompt is dismissed, the log says `DRIVE AUTH UNAVAILABLE` and the sweep still writes the local CSV. The notebook does not call `drive.mount`. `files.download` of the local CSV is the copy to take home when Drive is not.
+Credentials are `/content/latentcodecbench/drive-credentials.json`. The first start asks for one Google account, then refreshes an access token with `google.auth.default` on the Drive scope and saves it. Colab's preinstalled Drive libraries are used as installed. Restart session keeps `/content`, so the next start loads the file and does not ask again. A new VM asks once more. If the prompt is dismissed, the log says `DRIVE AUTH UNAVAILABLE` and the sweep still writes the local CSV. Every row reads the credential file again. Interrupt the sweep, re-run the auth cell, then re-run the sweep: finished rows are skipped, and the next push uploads the whole local CSV. The notebook does not call `drive.mount`. `files.download` of the local CSV is the copy to take home when Drive is not.
 
 ## L4 time
 
