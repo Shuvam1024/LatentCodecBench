@@ -138,3 +138,9 @@ The reconstruction table has no rate. This change defines the file a posterior m
 - `entropy_bits` is the cross-entropy of the codes under a factorized standard normal whose parameters were fixed before the clip. These VAEs were trained to reconstruct. A cross-entropy without a bitstream is an entropy estimate, so that number stays out of `bits`.
 - `channels: null` keeps every channel. A later config can code a prefix and hand the decoder zeros for the rest, if the low depths still sit above the classic ladder.
 - `notebooks/vae_bitrate.ipynb` is the GPU driver. `scripts/merge-vae-bitrate.py` copies the CSV back. `lpips` stays empty. ADR-0010. `docs/learn/05-latent-bitrate.md`. `docs/learn/06-a-prior-costs-bits.md`.
+
+## 2026-10-21 — Phase 2.4, the L4 bitrate table
+
+`docs/results/vae-bitrate.csv` now holds the finished sweep: 816 rows, 34 clips times `wan2_1`, `hunyuan`, `ltx`, and `wan2_2`, at bit depths 2, 4, 6, 8, 10, and 12. `scripts/merge-vae-bitrate.py` copied the Colab file. The config hash matches `configs/vae-bitrate.yaml`. Every row is bfloat16 on an NVIDIA L4. Run id `20261020T234203Z-8cb0b7cd9bc4-17ec7df8f1e6`. `lpips` is empty. `entropy_bits` stays the cross-entropy estimate and is not added into `bits`.
+
+`scripts/summarize-vae-bitrate.py` prints mean PSNR-Y, mean VMAF, and median bpp for each VAE and depth. The table and the reading of it are in `docs/learn/05-latent-bitrate.md`. Quality levels off from about depth 8. Depth 2 is about 17 to 18 dB. At depth 12 the mean PSNR-Y of each VAE is within 0.1 dB of `docs/results/vae-recon.csv`. Hunyuan on `sintel_trailer` is 2.44 dB lower, and the latent tensors are not in the repo, so the `[-4, 4]` clipping account of that gap is a hypothesis. Wan2.1 on the same clip drops 0.48 dB from depth 8 to depth 10.

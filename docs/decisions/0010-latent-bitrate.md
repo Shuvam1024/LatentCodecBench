@@ -29,7 +29,7 @@ The quantizer then clips that normalized grid to `[-4, 4]` and picks the nearest
 
 `lpips` stays empty. The metrics list is PSNR-Y, PSNR-RGB, SSIM, VMAF, and flicker.
 
-The 816 rows (34 clips × 4 VAEs × 6 depths) are produced by `notebooks/vae_bitrate.ipynb` on a GPU. This change does not commit them. `scripts/merge-vae-bitrate.py` copies an uploaded CSV into `docs/results/vae-bitrate.csv`.
+The 816 rows (34 clips × 4 VAEs × 6 depths) are produced by `notebooks/vae_bitrate.ipynb` on a GPU. `scripts/merge-vae-bitrate.py` copies an uploaded CSV into `docs/results/vae-bitrate.csv`. That file is the L4 sweep: 816 rows, run id `20261020T234203Z-8cb0b7cd9bc4-17ec7df8f1e6`. The per-depth means are in `docs/learn/05-latent-bitrate.md`.
 
 ## Consequences
 
