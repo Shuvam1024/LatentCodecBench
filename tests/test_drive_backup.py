@@ -16,6 +16,7 @@ import pytest
 from latentcodecbench.analysis.drive_backup import (
     CSV_NAME,
     DRIVE_FOLDER,
+    DRIVE_SCOPE,
     RESULTS_FOLDER,
     TARBALL_NAME,
     _run_argv,
@@ -23,6 +24,8 @@ from latentcodecbench.analysis.drive_backup import (
     credential_payload,
     extract_clip_tarball,
     prepare_credentials,
+    push_local_csv,
+    refresh_colab_credentials,
     status_lines,
     write_authorized_user,
 )
@@ -196,6 +199,23 @@ def test_write_authorized_user_is_private_and_payload_comes_from_the_object(tmp_
     assert payload["client_id"] == "id"
     assert payload["scopes"] == ["https://www.googleapis.com/auth/drive"]
 
+    class _Refreshed:
+        def __init__(self) -> None:
+            self.token = "ya29.live"
+            self.refresh_token = None
+            self.expiry = datetime(2030, 1, 1, tzinfo=UTC)
+            self.scopes = [DRIVE_SCOPE]
+            self.token_uri = None
+            self.client_id = None
+            self.client_secret = None
+
+        def to_json(self) -> str:
+            return json.dumps({"token": "stale"})
+
+    refreshed = credential_payload(_Refreshed())
+    assert refreshed["token"] == "ya29.live"
+    assert refreshed["expiry"].startswith("2030-01-01")
+
 
 def test_status_lines_count_local_and_drive_rows(tmp_path: Path) -> None:
     local = tmp_path / "artifact-propagation.csv"
@@ -351,6 +371,194 @@ def test_run_argv_kills_a_hung_child() -> None:
     assert code is None
     assert stdout == ""
     assert stderr == ""
+
+
+def test_refresh_colab_credentials_saves_a_drive_access_token(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "drive-credentials.json"
+
+    class _Creds:
+        def __init__(self) -> None:
+            self.token: str | None = None
+            self.refresh_token = None
+            self.scopes = [DRIVE_SCOPE]
+            self.expiry = datetime.now(UTC) + timedelta(hours=1)
+            self.token_uri = "https://oauth2.googleapis.com/token"
+            self.client_id = None
+            self.client_secret = None
+
+        def refresh(self, request: object) -> None:
+            assert request == "request"
+            self.token = "ya29.fresh"
+
+    creds = _Creds()
+
+    class _Auth:
+        @staticmethod
+        def default(scopes: list[str] | None = None) -> tuple[_Creds, str]:
+            assert scopes == [DRIVE_SCOPE]
+            return creds, "project"
+
+    class _Requests:
+        @staticmethod
+        def Request() -> str:
+            return "request"
+
+    def fake_import(name: str, package: str | None = None) -> Any:
+        del package
+        if name == "google.auth":
+            return _Auth
+        if name == "google.auth.transport.requests":
+            return _Requests
+        raise ImportError(name)
+
+    monkeypatch.setattr(
+        "latentcodecbench.analysis.drive_backup.importlib.import_module",
+        fake_import,
+    )
+    assert refresh_colab_credentials(path) == "ready"
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert saved["token"] == "ya29.fresh"
+    assert prepare_credentials(path) == "ready"
+
+
+def test_refresh_colab_credentials_logs_when_the_token_stays_empty(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "drive-credentials.json"
+
+    class _Creds:
+        token = None
+        refresh_token = None
+
+        def refresh(self, request: object) -> None:
+            del request
+
+    class _Auth:
+        @staticmethod
+        def default(scopes: list[str] | None = None) -> tuple[_Creds, None]:
+            del scopes
+            return _Creds(), None
+
+    class _Requests:
+        @staticmethod
+        def Request() -> object:
+            return object()
+
+    def fake_import(name: str, package: str | None = None) -> Any:
+        del package
+        if name == "google.auth":
+            return _Auth
+        if name == "google.auth.transport.requests":
+            return _Requests
+        raise ImportError(name)
+
+    monkeypatch.setattr(
+        "latentcodecbench.analysis.drive_backup.importlib.import_module",
+        fake_import,
+    )
+    assert refresh_colab_credentials(path) == "needs-auth"
+    assert not path.exists()
+    captured = capsys.readouterr()
+    assert "DRIVE AUTH UNAVAILABLE" in captured.err
+    assert "credentials have no token" in captured.err
+
+
+def test_push_retries_on_the_next_call_and_uploads_the_full_csv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    credentials = tmp_path / "drive-credentials.json"
+    file_id_path = tmp_path / "artifact-propagation.id"
+    csv_path = tmp_path / "artifact-propagation.csv"
+    csv_path.write_text("clip,vae\nalpha,wan2_1\nbeta,hunyuan\n", encoding="utf-8")
+    future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    refresh_count = {"n": 0}
+    uploads: list[tuple[str, str]] = []
+
+    def refresh(path: Path) -> str:
+        refresh_count["n"] += 1
+        if refresh_count["n"] == 1:
+            return "needs-auth"
+        write_authorized_user(path, {"token": "ya29.new", "expiry": future})
+        return "ready"
+
+    def ensure(path: Path, *, timeout: float) -> tuple[str, str]:
+        del path, timeout
+        return "ok", "file-9"
+
+    def upload(path: Path, file_id: str, source: Path, *, timeout: float) -> str:
+        del path, timeout
+        uploads.append((file_id, source.read_text(encoding="utf-8")))
+        return "ok"
+
+    monkeypatch.setattr("latentcodecbench.analysis.drive_backup.ensure_results_file", ensure)
+    monkeypatch.setattr("latentcodecbench.analysis.drive_backup.upload_file", upload)
+    assert (
+        push_local_csv(
+            credentials,
+            file_id_path,
+            csv_path,
+            timeout=5,
+            refresh=refresh,
+        )
+        == "needs-auth"
+    )
+    assert uploads == []
+    assert (
+        push_local_csv(
+            credentials,
+            file_id_path,
+            csv_path,
+            timeout=5,
+            refresh=refresh,
+        )
+        == "ok"
+    )
+    assert file_id_path.read_text(encoding="utf-8").strip() == "file-9"
+    assert uploads == [("file-9", "clip,vae\nalpha,wan2_1\nbeta,hunyuan\n")]
+
+
+def test_push_replaces_a_rejected_token_and_retries(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    credentials = tmp_path / "drive-credentials.json"
+    future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    write_authorized_user(credentials, {"token": "old", "expiry": future})
+    file_id_path = tmp_path / "artifact-propagation.id"
+    file_id_path.write_text("file-1\n", encoding="utf-8")
+    csv_path = tmp_path / "artifact-propagation.csv"
+    csv_path.write_text("full\n", encoding="utf-8")
+    seen: list[str] = []
+
+    def refresh(path: Path) -> str:
+        write_authorized_user(path, {"token": "new", "expiry": future})
+        return "ready"
+
+    def upload(path: Path, file_id: str, source: Path, *, timeout: float) -> str:
+        del file_id, source, timeout
+        token = str(json.loads(path.read_text(encoding="utf-8"))["token"])
+        seen.append(token)
+        return "auth-failed" if token == "old" else "ok"
+
+    monkeypatch.setattr("latentcodecbench.analysis.drive_backup.upload_file", upload)
+    assert (
+        push_local_csv(
+            credentials,
+            file_id_path,
+            csv_path,
+            timeout=5,
+            refresh=refresh,
+        )
+        == "ok"
+    )
+    assert seen == ["old", "new"]
+    assert json.loads(credentials.read_text(encoding="utf-8"))["token"] == "new"
 
 
 def test_worker_usage(monkeypatch: pytest.MonkeyPatch) -> None:

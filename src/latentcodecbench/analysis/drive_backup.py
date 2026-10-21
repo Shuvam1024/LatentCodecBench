@@ -8,17 +8,21 @@ a timeout. Nothing here mounts a filesystem.
 Credentials live in a JSON file the caller chooses. On Colab that path
 is ``/content/latentcodecbench/drive-credentials.json``, which survives
 Restart session. A missing or expired file is ``needs-auth``. The
-notebook prompts once in that case and writes the file. Later cells,
-including after a kernel restart, load the file and do not prompt.
+notebook prompts once in that case, refreshes an access token in-process,
+and writes the file. Later cells, including after a kernel restart, load
+the file and do not prompt. The upload child reads that access token.
+Colab's preinstalled Drive libraries are used as they are.
 """
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import subprocess
 import sys
 import tarfile
+from collections.abc import Callable
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -28,6 +32,7 @@ DRIVE_FOLDER = "LatentCodecBench"
 RESULTS_FOLDER = "results"
 CSV_NAME = "artifact-propagation.csv"
 TARBALL_NAME = "canonical-clips.tar"
+DRIVE_SCOPE = "https://www.googleapis.com/auth/drive"
 CSV_TIMEOUT = 60.0
 TARBALL_TIMEOUT = 600.0
 
@@ -72,21 +77,108 @@ def write_authorized_user(path: Path, payload: dict[str, Any]) -> None:
 
 
 def credential_payload(creds: Any) -> dict[str, Any]:
-    """JSON-ready dict from a google-auth credentials object."""
+    """JSON-ready dict from a google-auth credentials object.
+
+    The live access token wins over ``to_json``. Colab's object often has
+    an empty token until ``refresh(Request())``, and ``to_json`` can still
+    describe that empty state.
+    """
+    parsed: dict[str, Any] = {}
     to_json = getattr(creds, "to_json", None)
     if callable(to_json):
-        parsed = json.loads(to_json())
-        if isinstance(parsed, dict) and (parsed.get("token") or parsed.get("refresh_token")):
-            return dict(parsed)
-    scopes = list(getattr(creds, "scopes", None) or [])
-    return {
-        "token": getattr(creds, "token", None),
-        "refresh_token": getattr(creds, "refresh_token", None),
-        "token_uri": getattr(creds, "token_uri", None) or "https://oauth2.googleapis.com/token",
-        "client_id": getattr(creds, "client_id", None),
-        "client_secret": getattr(creds, "client_secret", None),
-        "scopes": scopes,
-    }
+        try:
+            loaded = json.loads(to_json())
+        except (TypeError, ValueError):
+            loaded = None
+        if isinstance(loaded, dict):
+            parsed = dict(loaded)
+    token = getattr(creds, "token", None) or parsed.get("token") or parsed.get("access_token")
+    refresh = getattr(creds, "refresh_token", None) or parsed.get("refresh_token")
+    if token:
+        parsed["token"] = token
+    if refresh:
+        parsed["refresh_token"] = refresh
+    expiry = _expiry_text(getattr(creds, "expiry", None))
+    if expiry is None and isinstance(parsed.get("expiry"), str):
+        expiry = parsed["expiry"]
+    if expiry:
+        parsed["expiry"] = expiry
+    scopes = list(getattr(creds, "scopes", None) or parsed.get("scopes") or [])
+    parsed["scopes"] = scopes
+    if not parsed.get("token_uri"):
+        parsed["token_uri"] = (
+            getattr(creds, "token_uri", None) or "https://oauth2.googleapis.com/token"
+        )
+    client_id = getattr(creds, "client_id", None)
+    if client_id:
+        parsed["client_id"] = client_id
+    client_secret = getattr(creds, "client_secret", None)
+    if client_secret:
+        parsed["client_secret"] = client_secret
+    return parsed
+
+
+def refresh_colab_credentials(path: Path) -> str:
+    """Refresh Colab application-default credentials into ``path``.
+
+    Returns ``ready`` or ``needs-auth``. This does not prompt. The notebook
+    calls ``authenticate_user`` first when a person has to consent, then
+    ``google.auth.default(scopes=[drive])`` and ``credentials.refresh``.
+    The access token written here is what the upload child sends.
+    """
+    try:
+        google_auth = importlib.import_module("google.auth")
+        requests_mod = importlib.import_module("google.auth.transport.requests")
+    except ImportError:
+        print("DRIVE AUTH UNAVAILABLE: google.auth is not installed", file=sys.stderr)
+        return "needs-auth"
+    try:
+        creds, _project = google_auth.default(scopes=[DRIVE_SCOPE])
+        creds.refresh(requests_mod.Request())
+        write_authorized_user(path, credential_payload(creds))
+    except Exception as exc:
+        print(f"DRIVE AUTH UNAVAILABLE: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return "needs-auth"
+    return prepare_credentials(path)
+
+
+def push_local_csv(
+    credentials: Path,
+    file_id_path: Path,
+    csv_path: Path,
+    *,
+    timeout: float,
+    refresh: Callable[[Path], str] | None = None,
+) -> str:
+    """Upload the whole local CSV. Each call re-reads ``credentials``.
+
+    A failed call does not stick. The next call checks the file again, so
+    re-running the Drive auth cell while the sweep is paused is picked up
+    on the next row. Once auth works, ``csv_path`` is uploaded in full,
+    including rows that were only on local disk. An ``auth-failed`` response
+    drops the saved token and tries ``refresh`` once before giving up.
+    """
+    if _ready(credentials, refresh) != "ready":
+        return "needs-auth"
+    file_id = ""
+    if file_id_path.is_file():
+        file_id = file_id_path.read_text(encoding="utf-8").strip()
+    if not file_id:
+        status, file_id = _ensure_file_id(
+            credentials,
+            file_id_path,
+            timeout=timeout,
+            refresh=refresh,
+        )
+        if not file_id:
+            return status
+    status = upload_file(credentials, file_id, csv_path, timeout=timeout)
+    if status != "auth-failed" or refresh is None:
+        return status
+    _drop_token(credentials)
+    if refresh(credentials) != "ready":
+        return "auth-failed"
+    return upload_file(credentials, file_id, csv_path, timeout=timeout)
 
 
 def ensure_results_file(credentials: Path, *, timeout: float = CSV_TIMEOUT) -> tuple[str, str]:
@@ -223,6 +315,47 @@ def _flat_y4m_name(member_name: str) -> str | None:
     if path.suffix != ".y4m":
         return None
     return path.name
+
+
+def _ready(credentials: Path, refresh: Callable[[Path], str] | None) -> str:
+    if prepare_credentials(credentials) == "ready":
+        return "ready"
+    if refresh is None:
+        return "needs-auth"
+    return refresh(credentials)
+
+
+def _ensure_file_id(
+    credentials: Path,
+    file_id_path: Path,
+    *,
+    timeout: float,
+    refresh: Callable[[Path], str] | None,
+) -> tuple[str, str]:
+    status, file_id = ensure_results_file(credentials, timeout=timeout)
+    if status == "auth-failed" and refresh is not None:
+        _drop_token(credentials)
+        if refresh(credentials) == "ready":
+            status, file_id = ensure_results_file(credentials, timeout=timeout)
+    if status != "ok" or not file_id:
+        return status or "failed", ""
+    file_id_path.parent.mkdir(parents=True, exist_ok=True)
+    file_id_path.write_text(file_id + "\n", encoding="utf-8")
+    return "ok", file_id
+
+
+def _drop_token(credentials: Path) -> None:
+    with suppress(OSError):
+        credentials.unlink()
+
+
+def _expiry_text(expiry: Any) -> str | None:
+    if isinstance(expiry, datetime):
+        moment = expiry if expiry.tzinfo is not None else expiry.replace(tzinfo=UTC)
+        return moment.astimezone(UTC).isoformat()
+    if isinstance(expiry, str) and expiry.strip():
+        return expiry
+    return None
 
 
 def _status(code: int | None) -> str:
