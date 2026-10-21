@@ -463,25 +463,59 @@ def test_notebook_keeps_results_local_and_copies_drive_separately() -> None:
     root = Path(__file__).resolve().parents[1]
     text = (root / "notebooks" / "artifact_propagation.ipynb").read_text(encoding="utf-8")
     cells = _notebook_cells()
-    code = "\n".join("".join(cell["source"]) for cell in cells if cell["cell_type"] == "code")
+    code_cells = [cell for cell in cells if cell["cell_type"] == "code"]
+    code = "\n".join("".join(cell["source"]) for cell in code_cells)
     assert "drive.mount" not in code
-    assert "pull_resume" in code
-    assert "push_copy" in code
-    assert "stage_files" in code
+    assert "pull_resume" not in code
+    assert "push_copy" not in code
+    assert "stage_files" not in code
+    assert "/content/drive" not in text
     assert "/content/results/artifact-propagation.csv" in text
-    assert "/content/drive/MyDrive/LatentCodecBench" in text
+    assert "/content/latentcodecbench/drive-credentials.json" in text
+    assert "artifact-propagation.csv" in text
+    assert "canonical-clips.tar" in text
+    assert "LatentCodecBench" in text
+    assert "google-api-python-client" in code
+    assert "resume_local" in code
+    assert "upload_file" in code
     assert "shuvam1024/phase-3-artifact-propagation" in text
     assert "files.download" in code
-    sweep_at = next(
-        index for index, cell in enumerate(cells) if "run_propagation(" in "".join(cell["source"])
+    needles = [
+        "google-api-python-client",
+        "FFMPEG_SHA256",
+        "authenticate_user",
+        "degrade_sources(",
+        "resume_local",
+        "status_lines",
+        "run_propagation(",
+        "files.download",
+    ]
+    indexes = [
+        next(index for index, cell in enumerate(code_cells) if needle in "".join(cell["source"]))
+        for needle in needles
+    ]
+    assert indexes == sorted(indexes)
+    assert len(set(indexes)) == len(indexes)
+    auth = next(
+        "".join(cell["source"])
+        for cell in code_cells
+        if "authenticate_user" in "".join(cell["source"])
     )
-    ffmpeg_at = next(
-        index for index, cell in enumerate(cells) if "FFMPEG_SHA256" in "".join(cell["source"])
-    )
-    degrade_at = next(
-        index for index, cell in enumerate(cells) if "degrade_sources(" in "".join(cell["source"])
-    )
-    assert ffmpeg_at < degrade_at < sweep_at
+    tree = ast.parse(auth)
+    top_level = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom) and node.module == "google.colab.auth"
+    ]
+    assert top_level == []
+    nested = False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.If):
+            continue
+        for child in ast.walk(node):
+            if isinstance(child, ast.ImportFrom) and child.module == "google.colab.auth":
+                nested = True
+    assert nested
     script = (root / "scripts" / "install-ffmpeg.sh").read_text(encoding="utf-8")
     sha = next(
         line.split("=", 1)[1].strip().strip('"')

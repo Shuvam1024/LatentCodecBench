@@ -160,3 +160,11 @@ The question is whether compression in the source is still visible after a VAE e
 - The ladder is three points from each Phase 1 list: x264 and x265 at CRF 18, 30, and 38, SVT-AV1 at CRF 28, 49, and 63. Presets stay medium, medium, and 6. `scripts/degrade-sources.py` writes nine y4m files per clip under `data/degraded/` and skips a file that already matches the source geometry. Those files stay gitignored.
 - Latent distance is MSE, relative L2, and cosine between the clean posterior mean and the degraded one. Pixel quality is luma PSNR of the degraded reconstruction against the clean source and against the degraded input. Blocking is the 8x8 boundary jump minus the interior jump. Ringing is the second difference beside a strong edge, with the edge samples left out. Retention is 0 when the reconstruction is back at the clean artifact level and 1 when it matches the degraded input.
 - `notebooks/artifact_propagation.ipynb` writes `/content/results/artifact-propagation.csv` on local disk. A separate copy, in a child process with a timeout, moves that file to Drive and brings a Drive file back at the start of a restart. The notebook does not call `drive.mount`. An L4 estimate from the reconstruction means is about 57 min for Wan2.1, 2.2 h for Hunyuan, 5 min for LTX, and 50 min for Wan2.2. ADR-0012. `docs/learn/10-artifact-propagation.md`.
+
+## 2026-10-21 — Phase 3.1, Drive API resume
+
+The first notebook copy looked for `/content/drive`. A fresh runtime does not have that directory, so nothing was backed up and a restart had nothing to resume from.
+
+- Clean clips come from `/content/data/clips`, or from `My Drive/LatentCodecBench/canonical-clips.tar` downloaded through the Drive API. The nine degraded variants are encoded on the Colab disk with the pinned ffmpeg.
+- `My Drive/LatentCodecBench/results/artifact-propagation.csv` is downloaded at startup and merged by `(clip_id, vae, source_codec, source_crf)`. The local row wins. After each new row that same Drive file is updated by file id, in a child process with a timeout.
+- Credentials are `/content/latentcodecbench/drive-credentials.json`. The account prompt runs when that file is missing. Restart session reuses it. If auth is unavailable the sweep logs that and keeps the local CSV.

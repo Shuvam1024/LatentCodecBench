@@ -80,7 +80,7 @@ The config hash is the SHA256 of `configs/vae-bitrate.yaml`. A second run that s
 
 `docs/results/vae-rd-bdrate.csv` is the per-clip BD-rate of each VAE against `libx264`, `libx265`, and `libsvtav1`, on `psnr_y` and `vmaf`. `status` is `defined`, `no_overlap`, `nonmonotonic`, or `too_few_points`. `bd_rate` is a percent from the same PCHIP as the classic table, and it is empty unless `status` is `defined`. `overlap` is the shared fraction of the two quality ranges. `below_0_75` is `1` when a defined pair is under 75%, and empty when the rate is undefined. Depth 2 is not a sample in this file. The mean curves, which do include depth 2, are `rd-psnr.png` and `rd-vmaf.png`. `rd-bdrate-clips.png` is the per-clip PSNR-Y rate against x264. `scripts/summarize-vae-rd.py` reprints the means. ADR-0011.
 
-`artifact-propagation.csv` is the Phase 3 table. It is not committed yet. The Colab notebook writes it on local disk, one row per clip, VAE, and degraded source. Rows sort by `clip_id`, `vae`, `source_codec`, `source_crf`. The resume key is that tuple. A file whose `config_sha256` does not match the study ladder is left alone. ADR-0012.
+`artifact-propagation.csv` is the Phase 3 table. It is not committed yet. The Colab notebook writes it on local disk, one row per clip, VAE, and degraded source. Rows sort by `clip_id`, `vae`, `source_codec`, `source_crf`. The resume key is that tuple. A Drive copy of the same file is merged on that key at startup: the local row wins when both sides have it. A file whose `config_sha256` does not match the study ladder is left alone. ADR-0012.
 
 | Column | Meaning |
 | --- | --- |

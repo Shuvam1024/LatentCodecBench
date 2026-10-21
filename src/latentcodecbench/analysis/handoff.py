@@ -1,13 +1,12 @@
-"""Copy sweep files without mounting a remote filesystem from this process.
+"""Copy files through a directory the caller already has.
 
-The Colab driver writes the CSV on local disk. A separate copy moves it
-to Drive, and a separate copy brings a Drive CSV back at the start of a
-restart. Both copies run in a child process with a timeout. A hung FUSE
-read is killed, and the sweep keeps the local file.
+These helpers are the directory copy from the earlier sweeps. The
+artifact notebook does not call them. It talks to the Drive API from
+``drive_backup`` and keeps its credential file on local disk.
 
-Nothing here calls ``drive.mount``. The caller mounts Drive, once, in
-the Colab UI. On a restart the mount is either already present or it is
-absent, and an absent directory is a skipped copy rather than a prompt.
+Each copy still runs in a child process with a timeout. A hung read is
+killed, and the caller keeps the local file. Nothing here calls
+``drive.mount``.
 """
 
 from __future__ import annotations
