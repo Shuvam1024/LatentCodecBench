@@ -94,7 +94,7 @@ Mean time is encode plus decode.
 | ltx | 32.30 | 31.98 | 74.56 | 78.62 | 0.88 |
 | wan2_2 | 35.35 | 34.45 | 87.13 | 90.85 | 9.49 |
 
-The bitrate of those latents is a separate table. `configs/vae-bitrate.yaml` quantizes the normalized posterior mean at bit depths 2, 4, 6, 8, 10, and 12, compresses the integer codes with zstd, and fills `crf`, `bits`, `bpp`, and `kbps`. `crf` there is the bit depth. The 816 rows are the Colab notebook `notebooks/vae_bitrate.ipynb`. [ADR-0010](docs/decisions/0010-latent-bitrate.md).
+The bitrate of those latents is [docs/results/vae-bitrate.csv](docs/results/vae-bitrate.csv) (816 rows, six bit depths on each clip and VAE). `configs/vae-bitrate.yaml` quantizes the normalized posterior mean at bit depths 2, 4, 6, 8, 10, and 12, compresses the integer codes with zstd, and fills `crf`, `bits`, `bpp`, and `kbps`. `crf` there is the bit depth. `lpips` is empty. `entropy_bits` is a cross-entropy estimate and is not added into `bits`. Quality levels off from about depth 8. The per-depth means are in [docs/learn/05-latent-bitrate.md](docs/learn/05-latent-bitrate.md). Run id `20261020T234203Z-8cb0b7cd9bc4-17ec7df8f1e6`. Runtime is bfloat16 on an NVIDIA L4. [ADR-0010](docs/decisions/0010-latent-bitrate.md).
 
 ## Quickstart
 

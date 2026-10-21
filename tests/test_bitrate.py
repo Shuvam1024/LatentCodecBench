@@ -18,7 +18,8 @@ from typing import Any
 import numpy as np
 import pytest
 
-from latentcodecbench.analysis.table import read_results
+from latentcodecbench.analysis.bitrate_table import bitrate_summary_markdown
+from latentcodecbench.analysis.table import COLUMNS, VAE_COLUMNS, read_results
 from latentcodecbench.codecs.rate import bits_per_pixel
 from latentcodecbench.vaes import GEOMETRIES
 from latentcodecbench.vaes.bitrate import (
@@ -578,6 +579,19 @@ def test_notebook_states_the_colab_contract() -> None:
                 checks_libvmaf = True
     assert env_name == "LATENTCODECBENCH_FFMPEG"
     assert checks_libvmaf
+
+
+def test_committed_bitrate_csv_matches_the_note() -> None:
+    root = Path(__file__).resolve().parents[1]
+    path = root / "docs" / "results" / "vae-bitrate.csv"
+    header = path.read_text(encoding="utf-8").splitlines()[0]
+    assert tuple(header.split(",")) == COLUMNS + VAE_COLUMNS
+    rows = read_results(path)
+    assert len(rows) == FULL_SWEEP_ROWS
+    keys = [(row.clip_id, row.codec, row.crf) for row in rows]
+    assert len(keys) == len(set(keys))
+    note = (root / "docs" / "learn" / "05-latent-bitrate.md").read_text(encoding="utf-8")
+    assert bitrate_summary_markdown(rows) in note
 
 
 def quantize_nearest(values: np.ndarray, bit_depth: int) -> np.ndarray:
