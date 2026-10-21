@@ -152,3 +152,11 @@ The four VAEs go on the same axes as x264, x265, and SVT-AV1. The integral is th
 `docs/results/vae-rd-bdrate.csv` holds the per-clip rows. The means are in `docs/learn/09-vae-rd-curves.md`. Against x264 on PSNR-Y they are Wan2.1 +824.24%, Hunyuan +725.09%, Wan2.2 +628.61%, and LTX +397.92%. Every defined PSNR pair against x264 overlaps on less than 75% of the combined range. The figures are `docs/results/rd-psnr.png`, `docs/results/rd-vmaf.png`, and `docs/results/rd-bdrate-clips.png`.
 
 The rate in the integral is the zstd file from step 2.4. It is not a tuned entropy coder.
+
+## 2026-10-21 — Phase 3.1, artifact propagation plan
+
+The question is whether compression in the source is still visible after a VAE encode. This change defines the study and the CPU pieces. The GPU rows are not in the commit.
+
+- The ladder is three points from each Phase 1 list: x264 and x265 at CRF 18, 30, and 38, SVT-AV1 at CRF 28, 49, and 63. Presets stay medium, medium, and 6. `scripts/degrade-sources.py` writes nine y4m files per clip under `data/degraded/` and skips a file that already matches the source geometry. Those files stay gitignored.
+- Latent distance is MSE, relative L2, and cosine between the clean posterior mean and the degraded one. Pixel quality is luma PSNR of the degraded reconstruction against the clean source and against the degraded input. Blocking is the 8x8 boundary jump minus the interior jump. Ringing is the second difference beside a strong edge, with the edge samples left out. Retention is 0 when the reconstruction is back at the clean artifact level and 1 when it matches the degraded input.
+- `notebooks/artifact_propagation.ipynb` writes `/content/results/artifact-propagation.csv` on local disk. A separate copy, in a child process with a timeout, moves that file to Drive and brings a Drive file back at the start of a restart. The notebook does not call `drive.mount`. An L4 estimate from the reconstruction means is about 57 min for Wan2.1, 2.2 h for Hunyuan, 5 min for LTX, and 50 min for Wan2.2. ADR-0012. `docs/learn/10-artifact-propagation.md`.

@@ -157,11 +157,14 @@ def encode_y4m(
     codec: str,
     crf: int,
     preset: str | None = None,
+    measure_decode: bool = True,
 ) -> RatePoint:
-    """Encode ``source`` and time a single-threaded decode to null.
+    """Encode ``source`` and, by default, time a single-threaded decode to null.
 
     Decode time is the decoder only (``-f null``). It does not include
-    writing a reconstructed y4m. Callers that need pixels decode again.
+    writing a reconstructed y4m. Callers that need pixels use
+    :func:`decode_y4m`. Pass ``measure_decode=False`` when that second
+    decode would only repeat this one.
     """
     chosen = BENCHMARK_PRESET[codec] if preset is None else preset
     with source.open("rb") as handle:
@@ -190,20 +193,22 @@ def encode_y4m(
     ]
     encode_seconds = _run_timed(encode_command, bitstream)
     bits = video_bits(bitstream)
-    decode_command = [
-        ffmpeg_binary(),
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-threads",
-        "1",
-        "-i",
-        str(bitstream),
-        "-f",
-        "null",
-        "-",
-    ]
-    decode_seconds = _run_timed(decode_command, bitstream)
+    decode_seconds = 0.0
+    if measure_decode:
+        decode_command = [
+            ffmpeg_binary(),
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-threads",
+            "1",
+            "-i",
+            str(bitstream),
+            "-f",
+            "null",
+            "-",
+        ]
+        decode_seconds = _run_timed(decode_command, bitstream)
     return RatePoint(
         codec=codec,
         crf=crf,
@@ -220,6 +225,32 @@ def encode_y4m(
         decode_seconds=decode_seconds,
         bitstream=bitstream,
     )
+
+
+def decode_y4m(bitstream: Path, dest: Path) -> float:
+    """Decode ``bitstream`` to an 8-bit 4:2:0 y4m. Returns wall-clock seconds.
+
+    A failed ffmpeg removes ``dest``. The bitstream is left in place.
+    """
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        ffmpeg_binary(),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-threads",
+        "1",
+        "-i",
+        str(bitstream),
+        "-an",
+        "-pix_fmt",
+        "yuv420p",
+        "-f",
+        "yuv4mpegpipe",
+        str(dest),
+    ]
+    return _run_timed(command, dest)
 
 
 def _run_timed(command: list[str], bitstream: Path) -> float:

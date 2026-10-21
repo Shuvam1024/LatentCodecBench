@@ -79,3 +79,23 @@ The config hash is the SHA256 of `configs/vae-recon.yaml`. A second run that see
 The config hash is the SHA256 of `configs/vae-bitrate.yaml`. A second run that sees a different hash leaves the file alone. A `(clip_id, codec, crf)` already in the file is skipped.
 
 `docs/results/vae-rd-bdrate.csv` is the per-clip BD-rate of each VAE against `libx264`, `libx265`, and `libsvtav1`, on `psnr_y` and `vmaf`. `status` is `defined`, `no_overlap`, `nonmonotonic`, or `too_few_points`. `bd_rate` is a percent from the same PCHIP as the classic table, and it is empty unless `status` is `defined`. `overlap` is the shared fraction of the two quality ranges. `below_0_75` is `1` when a defined pair is under 75%, and empty when the rate is undefined. Depth 2 is not a sample in this file. The mean curves, which do include depth 2, are `rd-psnr.png` and `rd-vmaf.png`. `rd-bdrate-clips.png` is the per-clip PSNR-Y rate against x264. `scripts/summarize-vae-rd.py` reprints the means. ADR-0011.
+
+`artifact-propagation.csv` is the Phase 3 table. It is not committed yet. The Colab notebook writes it on local disk, one row per clip, VAE, and degraded source. Rows sort by `clip_id`, `vae`, `source_codec`, `source_crf`. The resume key is that tuple. A file whose `config_sha256` does not match the study ladder is left alone. ADR-0012.
+
+| Column | Meaning |
+| --- | --- |
+| `run_id`, `git_sha`, `config_sha256` | Same idea as the classic table. The config hash is the study ladder and the benchmark presets. |
+| `clip_id`, `vae` | Canonical clip id, and `wan2_1`, `hunyuan`, `ltx`, or `wan2_2`. |
+| `source_codec`, `source_crf`, `preset` | The codec that degraded the source, its CRF, and the Phase 1 preset. |
+| `width`, `height`, `frames` | Geometry of the canonical clip. |
+| `latent_mse`, `latent_relative_l2`, `latent_cosine` | Distance from the clean posterior mean to the degraded one. |
+| `psnr_recon_clean` | Luma PSNR of the degraded reconstruction against the clean source. |
+| `psnr_recon_degraded` | Luma PSNR of that reconstruction against the degraded source. |
+| `psnr_degraded_clean` | Luma PSNR of the degraded source against the clean source. |
+| `blocking_clean`, `blocking_degraded`, `blocking_recon` | 8x8 boundary jump minus interior jump, on luma. |
+| `blocking_retention` | `(recon - clean) / (degraded - clean)`. Empty when the gap is under `1e-6`. |
+| `ringing_clean`, `ringing_degraded`, `ringing_recon` | Mean absolute second difference beside strong edges. |
+| `ringing_retention` | Same ratio as blocking. Empty when the gap is under `1e-6`. |
+| `clean_encode_seconds` | Wall clock of the clean encode. Shared by the nine rows of that clip and VAE. |
+| `encode_seconds`, `decode_seconds` | Wall clock of the degraded encode and its decode. |
+| `runtime_dtype`, `gpu_name` | The runtime that produced the row. |

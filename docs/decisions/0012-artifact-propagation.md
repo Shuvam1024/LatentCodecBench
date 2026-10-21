@@ -1,0 +1,50 @@
+# ADR-0012: Source-artifact study uses a three-point Phase 1 ladder
+
+- Status: Accepted
+- Date: 2026-10-21
+
+## Context
+
+Phase 2 measured each VAE on the clean canonical clips. Phase 3 asks a different question: when the source is already compressed, does that damage show up in the latent, and does the reconstruction keep it?
+
+The Phase 1 ladders are six CRF points per codec. Running every point through four VAEs, with an encode of the clean source and an encode plus decode of each degraded source, is a long L4 job. The last bitrate sweep also lost time to `drive.mount` re-consent and to FUSE calls that never returned. A restart had to mount again, and a hung copy stalled the loop.
+
+## Decision
+
+The study ladder is three points from each Phase 1 ladder in ADR-0005. x264 and x265 use CRF 18, 30, and 38. SVT-AV1 uses CRF 28, 49, and 63. Those are the two ends and the middle step. Presets stay `medium`, `medium`, and SVT-AV1 preset 6. `scripts/degrade-sources.py` writes the decoded y4m under `data/degraded/` and skips a file whose geometry already matches the source. The y4m files stay gitignored with the rest of `/data/`.
+
+Each VAE row records:
+
+- Latent distance from the clean posterior mean to the degraded one: MSE, relative L2 (`||diff|| / ||clean||`, or `||diff||` when the clean norm is 0), and cosine.
+- Luma PSNR of the reconstruction of the degraded source against the clean source, and against the degraded source. The clean reconstruction is not decoded. The degraded-versus-clean PSNR is stored beside them so the input damage has a number.
+- Blocking: mean absolute jump across 8×8 boundaries minus the mean absolute jump inside those blocks, horizontal and vertical pooled.
+- Ringing: mean absolute second difference on the samples one step outside a strong edge. A strong edge is an absolute neighbor difference of at least 12 on the 0–255 scale. The two samples that form the edge are excluded, so a pure step scores 0.
+- Retention `(score(recon) - score(clean)) / (score(degraded) - score(clean))`. 0 means the artifact is back at the clean level. 1 means it matches the degraded input. The ratio is empty when the degraded score is within `1e-6` of the clean score.
+
+Quality in this table is luma PSNR, the pooled-MSE definition from ADR-0004. VMAF can be added when the rows are scored. It is not part of this definition, and it is not part of the runtime estimate.
+
+The GPU driver writes `/content/results/artifact-propagation.csv` on Colab local disk and flushes after every row. Drive is a second copy. `pull_resume` copies a Drive CSV onto the local file at startup when the Drive path already exists. `push_copy` copies the local file to Drive after each row, and only when the Drive directory is already present. Both copies run in a child process with a timeout. A timeout leaves the local file in place and the loop continues. The notebook never calls `drive.mount`. A `files.download` of the local CSV is the fallback. The resume key is `(clip_id, vae, source_codec, source_crf)`.
+
+The L4 estimate uses the mean encode and decode from `docs/results/vae-recon.csv` (34 clips, bfloat16, NVIDIA L4):
+
+`34 * (encode + 9 * (encode + decode))`
+
+That is one clean encode per clip and nine degraded encode-and-decode passes. Wan2.1 is about 57 min, Hunyuan about 2.2 h, LTX about 5 min, and Wan2.2 about 50 min. Pixel metrics run on CPU and are outside that estimate.
+
+## Consequences
+
+Nine variants times 34 clips is 306 degraded y4m files per machine, and 1224 VAE rows once all four models have run. A full six-point ladder would about double the GPU time. The three points still span the Phase 1 range: the best CRF, a middle CRF, and the softest CRF on each codec's own scale. CRF numbers stay incomparable across codecs, as in ADR-0005.
+
+Four of the 34 sources are already Theora or VP9 re-encodes. Their degraded files are a second generation. The table includes them with the rest of the set.
+
+A restart that finds a Drive CSV replaces the local file with it, then continues. A row written locally and not yet copied is encoded again. The push after every row keeps that window to one row. A hung FUSE call dies at the timeout instead of stalling the sweep.
+
+## Alternatives
+
+**QP 20 to 50 on x264 and SVT-AV1 only.** That is a new scale, and it drops x265. The Phase 1 ladders already have measured operating points. Reusing a subset keeps the degraded sources on the same CRF numbers as the classic table.
+
+**All six Phase 1 points.** That is the full overlap study. It doubles the degraded encodes and the VAE forwards. Three points answer whether the damage survives. The interior points can be filled later if the ends are ambiguous.
+
+**Write the CSV straight to Drive.** That is how the bitrate sweep lost rows: the mount prompt and a stuck FUSE write stopped the loop. Local disk is the file the loop trusts. Drive is a copy.
+
+**Call `drive.mount` at the top of the notebook.** A restarted runtime asks for consent again, and the cell blocks until a person clicks. The mount stays a manual step. The notebook only uses the directory when it is already there.
