@@ -386,10 +386,63 @@ def _require_blocking_grid(clips: list[Path]) -> None:
             raise PropagationError(f"{clip.name} is smaller than two 8x8 blocks")
 
 
+def propagation_key(row: PropagationRow) -> tuple[str, str, str, int]:
+    """Resume identity: clip, VAE, source codec, source CRF."""
+    return (row.clip_id, row.vae, row.source_codec, row.source_crf)
+
+
+def merge_propagation(
+    local: list[PropagationRow],
+    remote: list[PropagationRow],
+) -> list[PropagationRow]:
+    """Union of ``local`` and ``remote``, one row per :func:`propagation_key`.
+
+    A key present on both sides keeps the local row. Duplicate keys inside
+    one side are an error. Two non-empty sides whose config hashes differ
+    are an error, and the caller leaves both files alone.
+    """
+    local_index = _index(local)
+    remote_index = _index(remote)
+    local_configs = {row.config_sha256 for row in local}
+    remote_configs = {row.config_sha256 for row in remote}
+    if len(local_configs) > 1 or len(remote_configs) > 1:
+        raise PropagationError("CSV uses more than one config")
+    if local_configs and remote_configs and local_configs != remote_configs:
+        raise PropagationError("local and Drive CSVs use different configs; refusing to mix rows")
+    merged = dict(remote_index)
+    merged.update(local_index)
+    return list(merged.values())
+
+
+def resume_local(local_path: Path, remote_path: Path | None) -> tuple[str, int]:
+    """Merge a downloaded Drive CSV into ``local_path``.
+
+    Returns ``(status, row_count)``. ``status`` is ``local-only``,
+    ``remote-only``, or ``merged``. A config mismatch raises before
+    ``local_path`` is rewritten.
+    """
+    local_rows = read_propagation(local_path) if local_path.is_file() else []
+    remote_missing = (
+        remote_path is None or not remote_path.is_file() or remote_path.stat().st_size == 0
+    )
+    if remote_missing:
+        return "local-only", len(local_rows)
+    assert remote_path is not None
+    remote_rows = read_propagation(remote_path)
+    if not remote_rows:
+        return "local-only", len(local_rows)
+    if not local_rows:
+        write_propagation(local_path, remote_rows)
+        return "remote-only", len(remote_rows)
+    merged = merge_propagation(local_rows, remote_rows)
+    write_propagation(local_path, merged)
+    return "merged", len(merged)
+
+
 def _index(rows: list[PropagationRow]) -> dict[tuple[str, str, str, int], PropagationRow]:
     found: dict[tuple[str, str, str, int], PropagationRow] = {}
     for row in rows:
-        key = (row.clip_id, row.vae, row.source_codec, row.source_crf)
+        key = propagation_key(row)
         if key in found:
             raise PropagationError(f"duplicate row {key}")
         found[key] = row

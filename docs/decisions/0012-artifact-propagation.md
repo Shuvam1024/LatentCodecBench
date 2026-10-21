@@ -23,7 +23,7 @@ Each VAE row records:
 
 Quality in this table is luma PSNR, the pooled-MSE definition from ADR-0004. VMAF can be added when the rows are scored. It is not part of this definition, and it is not part of the runtime estimate.
 
-The GPU driver writes `/content/results/artifact-propagation.csv` on Colab local disk and flushes after every row. Drive is a second copy. `pull_resume` copies a Drive CSV onto the local file at startup when the Drive path already exists. `push_copy` copies the local file to Drive after each row, and only when the Drive directory is already present. Both copies run in a child process with a timeout. A timeout leaves the local file in place and the loop continues. The notebook never calls `drive.mount`. A `files.download` of the local CSV is the fallback. The resume key is `(clip_id, vae, source_codec, source_crf)`.
+The GPU driver writes `/content/results/artifact-propagation.csv` on Colab local disk and flushes after every row. Drive is a second copy, reached through the Drive API. At startup the notebook downloads `My Drive/LatentCodecBench/results/artifact-propagation.csv` and merges it into the local file. The resume key is `(clip_id, vae, source_codec, source_crf)`. A key on both sides keeps the local row. A key only on Drive is filled in. Two config hashes are refused, and the local file is left as it was. After each new row the same Drive file is updated by file id, in a child process with a 60 second timeout. A timeout leaves the local file in place and the loop continues. Clean clips come from `/content/data/clips` when those y4m files are already there, otherwise from `My Drive/LatentCodecBench/canonical-clips.tar`. The nine degraded variants are encoded on the Colab disk with the pinned ffmpeg. Credentials live at `/content/latentcodecbench/drive-credentials.json`, which survives Restart session. `authenticate_user` runs when that file is missing or no longer usable. That is one account prompt. A later Restart session loads the file. If auth is unavailable the sweep logs `DRIVE AUTH UNAVAILABLE` and keeps the local CSV. The notebook does not call `drive.mount`. `files.download` of the local CSV is the fallback.
 
 The L4 estimate uses the mean encode and decode from `docs/results/vae-recon.csv` (34 clips, bfloat16, NVIDIA L4):
 
@@ -37,7 +37,7 @@ Nine variants times 34 clips is 306 degraded y4m files per machine, and 1224 VAE
 
 Four of the 34 sources are already Theora or VP9 re-encodes. Their degraded files are a second generation. The table includes them with the rest of the set.
 
-A restart that finds a Drive CSV replaces the local file with it, then continues. A row written locally and not yet copied is encoded again. The push after every row keeps that window to one row. A hung FUSE call dies at the timeout instead of stalling the sweep.
+A restart downloads the Drive CSV and merges it into the local file. The local row wins on a shared key, so a row that has not been uploaded yet is kept. The upload after every row keeps that window to one row. A hung API call dies at the timeout. Missing auth is logged and the loop continues on local disk.
 
 ## Alternatives
 
@@ -47,4 +47,8 @@ A restart that finds a Drive CSV replaces the local file with it, then continues
 
 **Write the CSV straight to Drive.** That is how the bitrate sweep lost rows: the mount prompt and a stuck FUSE write stopped the loop. Local disk is the file the loop trusts. Drive is a copy.
 
-**Call `drive.mount` at the top of the notebook.** A restarted runtime asks for consent again, and the cell blocks until a person clicks. The mount stays a manual step. The notebook only uses the directory when it is already there.
+**Call `drive.mount` at the top of the notebook.** A restarted runtime asks for consent again, and the cell blocks until a person clicks. The notebook uses the Drive API and a credential file on `/content` instead. Restart session reuses that file.
+
+**Copy through `/content/drive` when that directory is already mounted.** A fresh runtime never has the directory, so the backup never runs. An API call by file id does not need a mount.
+
+**Replace the local CSV with the Drive file at startup.** A row written locally and not yet uploaded would disappear. The merge keeps the local row for a shared key and fills keys only the Drive file has.

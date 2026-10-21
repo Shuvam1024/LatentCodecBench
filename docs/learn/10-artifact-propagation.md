@@ -46,11 +46,13 @@ Retention puts those artifact scores on one scale:
 
 ## Where the rows go
 
-The sweep writes `/content/results/artifact-propagation.csv` on the Colab disk and flushes that file after every row. Drive is a separate copy. At the start of a run, if `MyDrive/LatentCodecBench` is already mounted, the Drive CSV is copied onto the local file and the sweep resumes from those keys. After each new row the local file is copied back, in a child process with a 60 second timeout. A timeout, or a Drive directory that is not there, is logged, and the loop keeps going. The local file is the one the loop trusts.
+The sweep writes `/content/results/artifact-propagation.csv` on the Colab disk and flushes that file after every row. Drive is a separate copy of that same file: `My Drive/LatentCodecBench/results/artifact-propagation.csv`. At startup the notebook downloads it through the Drive API and merges the two CSVs. After each new row the same Drive file is updated by its file id, in a child process with a 60 second timeout. A timeout is logged, and the loop keeps going. The local file is the one the loop trusts.
 
-The notebook never calls `drive.mount`. Mounting is a manual step in the Colab UI. A restarted runtime that still has the mount does not mount again. A restarted runtime that lost the mount resumes from whatever CSV is already on local disk, and the Drive copy waits until the directory is present. `files.download` of the local CSV is there for the case where Drive is not the way the file comes home.
+The resume key is `(clip_id, vae, source_codec, source_crf)`. A key on both sides keeps the local row. A key that only Drive has is copied in. A CSV built from a different ladder is refused, and the local file is left as it was.
 
-The resume key is `(clip_id, vae, source_codec, source_crf)`. A CSV built from a different ladder is refused rather than mixed.
+Clean clips are the y4m files already in `/content/data/clips`. When that directory is empty, the notebook downloads `My Drive/LatentCodecBench/canonical-clips.tar` and extracts it, then encodes the nine degraded variants on the Colab disk. The pinned ffmpeg is already installed for that encode.
+
+Credentials are `/content/latentcodecbench/drive-credentials.json`. The first start asks for one Google account. Restart session keeps `/content`, so the next start loads the file and does not ask again. A new VM asks once more. If the prompt is dismissed, the log says `DRIVE AUTH UNAVAILABLE` and the sweep still writes the local CSV. The notebook does not call `drive.mount`. `files.download` of the local CSV is the copy to take home when Drive is not.
 
 ## L4 time
 
