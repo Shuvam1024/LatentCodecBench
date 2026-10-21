@@ -104,6 +104,10 @@ The same rows against the Phase 1 codecs, with the Phase 1 PCHIP. Depth 2 is lef
 
 ![Mean VMAF, classic codecs and VAEs](docs/results/rd-vmaf.png)
 
+## Source artifacts
+
+Phase 3 asks whether compression in the source is still visible in the VAE latent. The study re-encodes each clip with x264, x265, and SVT-AV1 at three CRF points taken from the Phase 1 ladders, then compares the clean latent with the degraded one. The plan, the metric definitions, and the L4 time estimate are in [docs/learn/10-artifact-propagation.md](docs/learn/10-artifact-propagation.md). [ADR-0012](docs/decisions/0012-artifact-propagation.md). The measured table is not in the repo yet.
+
 ## Quickstart
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:

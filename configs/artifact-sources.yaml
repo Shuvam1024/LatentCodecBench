@@ -1,0 +1,15 @@
+# Degraded sources for the codec-leak study. Each CRF list is a subset of
+# the Phase 1 ladder in configs/classic.yaml. Presets match that sweep.
+# ADR-0012.
+version: 1
+kind: artifact-sources
+codecs:
+  libx264:
+    preset: medium
+    crf: [18, 30, 38]
+  libx265:
+    preset: medium
+    crf: [18, 30, 38]
+  libsvtav1:
+    preset: "6"
+    crf: [28, 49, 63]

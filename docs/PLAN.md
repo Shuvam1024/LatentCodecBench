@@ -39,7 +39,7 @@ Wrappers: `AutoencoderKLWan` for Wan2.1 and for the Wan2.2 TI2V-5B VAE, `Autoenc
   Acceptance: `lcb plot rd` reads the VAE table, writes figures under `docs/figures/`, and the README reports mean BD-rate together with mean overlap.
 
 ## Phase 3: Codec-leak study
-- 3.1 Re-encode sources at QP 20 to 50 (x264, SVT-AV1).
+- 3.1 Degraded sources and the propagation metrics. Three CRF points from each Phase 1 ladder (x264, x265, SVT-AV1): latent distance, luma PSNR of the degraded reconstruction against the clean source and against the degraded source, and blocking/ringing retention. ADR-0012. `scripts/degrade-sources.py` writes the y4m files. `notebooks/artifact_propagation.ipynb` is the GPU driver. Measured rows land in step 3.2.
 - 3.2 Encode through each VAE; latent distance to clean latents, artifact reconstruction.
 - 3.3 Linear probe predicting QP from latents, cross-validated with confidence intervals.
 - 3.4 Write-up: implications for training-data filtering.
