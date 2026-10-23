@@ -15,5 +15,6 @@ Short notes for interview prep. Each one is about a page, in plain language, and
 | [08 — Reconstruction, before a bitrate](08-reconstruction.md) | Phase 1 metrics on the real clips, Hunyuan tiled from the start, and why the rate columns are empty |
 | [09 — The VAEs on the same axes as x264](09-vae-rd-curves.md) | BD-rate against the classic ladder, the depth-2 cut, the plateau near 8 bits, and LTX's lower ceiling |
 | [10 — Does source compression survive the VAE?](10-artifact-propagation.md) | The three-point study ladder, latent distance, robust retention statistics, the measured results, and an encoder that did not reproduce its own output |
+| [11 — When would you filter compressed training video?](11-training-data-filter.md) | Pixel ΔPSNR against the clean reconstruction, the latent shift beside it, and which rung a filter can drop |
 
 

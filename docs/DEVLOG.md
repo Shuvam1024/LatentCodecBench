@@ -192,3 +192,11 @@ Fixes in the same change:
 
 - `push_local_csv` takes a `reconcile` callback. The notebook passes `reconcile_with_drive`, which downloads the Drive CSV, merges it into the local file, and refuses the upload when the local file would have fewer rows. A failed download also skips the upload.
 - The README status table said Phases 2 and 3 had not started.
+
+## 2026-10-23 — Phase 3.4, training-data filter
+
+Note 10 measured the leak. This change says which rung of that ladder a training filter would drop.
+
+- The pixel number is the median, over clips, of reconstruction PSNR against the clean source minus the clean-source reconstruction. Median latent relative L2 is printed beside it, because a flat pixel score is not a still latent.
+- `scripts/summarize-filtering.py` reprints that section. `docs/learn/11-training-data-filter.md` is the printout plus the filter it supports. A test checks that the note still contains the printout.
+- The cutoff is a rung of each codec's own ladder. A CRF does not travel from x264 onto SVT-AV1. The linear probe is still unrun.

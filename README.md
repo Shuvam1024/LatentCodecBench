@@ -17,7 +17,7 @@ LatentCodecBench measures the variational autoencoders inside open video generat
 | 0. Foundation | Package, CI, docs | Done |
 | 1. Data and classic codecs | Clips, metrics, x264 / x265 / SVT-AV1 | Done |
 | 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Done |
-| 3. Codec leak | Source-codec artifacts in the latent | 3.1–3.2 done; 3.3 probe needs a GPU run |
+| 3. Codec leak | Source-codec artifacts in the latent | 3.1, 3.2, and 3.4 done; 3.3 probe needs a GPU run |
 | 4. Post-filter | Tiny decoder-side network, fixed compute | Not started |
 | 5. Write-up | Report, figures, public release | Not started |
 
@@ -106,7 +106,7 @@ The same rows against the Phase 1 codecs, with the Phase 1 PCHIP. Depth 2 is lef
 
 ## Source artifacts
 
-Phase 3 asks whether compression in the source is still visible in the VAE latent. The study re-encodes each clip with x264, x265, and SVT-AV1 at three CRF points taken from the Phase 1 ladders, then compares the clean latent with the degraded one. The definitions and the full reading are in [docs/learn/10-artifact-propagation.md](docs/learn/10-artifact-propagation.md). [ADR-0012](docs/decisions/0012-artifact-propagation.md).
+Phase 3 asks whether compression in the source is still visible in the VAE latent. The study re-encodes each clip with x264, x265, and SVT-AV1 at three CRF points taken from the Phase 1 ladders, then compares the clean latent with the degraded one. The definitions and the full reading are in [docs/learn/10-artifact-propagation.md](docs/learn/10-artifact-propagation.md). The same rows, read as a training-data filter, are in [docs/learn/11-training-data-filter.md](docs/learn/11-training-data-filter.md). [ADR-0012](docs/decisions/0012-artifact-propagation.md).
 
 The table is [docs/results/artifact-propagation.csv](docs/results/artifact-propagation.csv): 1224 rows, 34 clips, four VAEs, x264 and x265 at CRF 18, 30, 38 and SVT-AV1 at CRF 28, 49, 63. Run id `20261021T214039Z-933d37d99d88-3d42134b58f8`, bfloat16 on an NVIDIA L4. Medians over the clips:
 
