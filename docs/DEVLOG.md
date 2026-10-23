@@ -208,3 +208,11 @@ The README already had the long sections. This change puts one rebuilt table at 
 - `lcb reproduce` reads the classic, reconstruction, bitrate, and propagation CSVs. It checks the headline, notes 09 through 11, `vae-rd-bdrate.csv`, and `artifact-propagation-summary.csv`. It redraws the figures in a temporary directory and leaves the committed PNGs alone.
 - The command does not download clips, encode them, or load a VAE. Those steps stay `lcb data fetch`, `lcb baselines run`, and the Colab notebooks.
 - `docs/learn/12-reproducing-the-tables.md`.
+
+## 2026-10-23 — Phase 5.2, report and confidence intervals
+
+The headline is a point estimate. This change puts a 95% Student-t interval around the means that are taken across clips, and writes down what that interval is not.
+
+- `docs/REPORT.md` holds the reconstruction intervals, the BD-rate intervals against x264, the degraded-source mismatch, and the limitations. The measured block is rebuilt from the CSVs. `lcb reproduce` fails if the report drops it.
+- The interval uses the clips that enter the published mean. Undefined BD-rate clips stay out of it. A one-point sample has no interval.
+- `docs/learn/13-confidence-intervals.md`. The clip list is designed, so the interval is clip-to-clip spread of the mean, not a claim about all video and not the error of one forward.

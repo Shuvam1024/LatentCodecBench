@@ -19,7 +19,7 @@ LatentCodecBench measures the variational autoencoders inside open video generat
 | 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Done |
 | 3. Codec leak | Source-codec artifacts in the latent | 3.1, 3.2, and 3.4 done; 3.3 probe needs a GPU run |
 | 4. Post-filter | Tiny decoder-side network, fixed compute | Not started |
-| 5. Write-up | Report, figures, public release | 5.1 done; 5.2 report and 5.3 release not started |
+| 5. Write-up | Report, figures, public release | 5.1 and 5.2 done; 5.3 release not started |
 
 The full step list is in [docs/PLAN.md](docs/PLAN.md). Design notes are in [docs/decisions/](docs/decisions/). Short concept notes are in [docs/learn/](docs/learn/).
 
@@ -55,7 +55,7 @@ uv run lcb reproduce
 | ltx | 34 | 32.30 dB | 74.56 |
 | wan2_2 | 34 | 35.35 dB | 87.13 |
 
-The long form of each phase is in the sections below and in [docs/learn/](docs/learn/). How the command decides that a page still matches is [docs/learn/12-reproducing-the-tables.md](docs/learn/12-reproducing-the-tables.md).
+The long form of each phase is in the sections below and in [docs/learn/](docs/learn/). The technical report, with confidence intervals and limitations, is [docs/REPORT.md](docs/REPORT.md). How the command decides that a page still matches is [docs/learn/12-reproducing-the-tables.md](docs/learn/12-reproducing-the-tables.md).
 
 
 ## Repository layout
