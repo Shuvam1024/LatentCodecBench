@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/Shuvam1024/LatentCodecBench/actions/workflows/ci.yml/badge.svg)](https://github.com/Shuvam1024/LatentCodecBench/actions/workflows/ci.yml)
 
-LatentCodecBench measures the variational autoencoders inside open video generators as if they were codecs. It compares Wan2.1, Wan2.2, LTX-Video, and HunyuanVideo with x264, x265, and SVT-AV1 on rate-distortion, temporal stability, and throughput; checks whether compression artifacts in the source video show up in the latent; and tests whether a tiny decoder-side post-filter can buy back quality under a fixed compute budget.
+LatentCodecBench measures the variational autoencoders inside open video generators as if they were codecs. It compares Wan2.1, Wan2.2, LTX-Video, and HunyuanVideo with x264, x265, and SVT-AV1 on rate-distortion, temporal stability, and throughput, and checks whether compression artifacts in the source video show up in the latent.
 
 ## Research questions
 
 1. How do these video VAEs compare with x264, x265, and SVT-AV1 on rate-distortion, temporal stability, and throughput?
 2. Do classic-codec artifacts in the source video leak into the VAE latent?
-3. Can a tiny decoder-side post-filter recover quality at a fixed compute budget?
+3. Can a lightweight decoder-side post-filter recover quality? The design is still open.
 
 ## Status
 
@@ -17,11 +17,18 @@ LatentCodecBench measures the variational autoencoders inside open video generat
 | 0. Foundation | Package, CI, docs | Done |
 | 1. Data and classic codecs | Clips, metrics, x264 / x265 / SVT-AV1 | Done |
 | 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Done |
-| 3. Codec leak | Source-codec artifacts in the latent | 3.1, 3.2, and 3.4 done; 3.3 probe needs a GPU run |
-| 4. Post-filter | Tiny decoder-side network, fixed compute | Not started |
-| 5. Write-up | Report, figures, public release | 5.1 and 5.2 done; 5.3 release not started |
+| 3. Codec leak | Source-codec artifacts in the latent | 3.1, 3.2, and 3.4 done; 3.3 is future work |
+| 4. Post-filter | Lightweight decoder-side filter; design not chosen | Future work |
+| 5. Write-up | Report, figures, public release | Done |
 
 The full step list is in [docs/PLAN.md](docs/PLAN.md). Design notes are in [docs/decisions/](docs/decisions/). Short concept notes are in [docs/learn/](docs/learn/).
+
+## Future work
+
+Two items were left out of v1.0.0.
+
+- **3.3 Linear probe.** Predict the source QP or CRF from the latent, cross-validated, with confidence intervals. That would show whether the source quantizer is linearly readable, which is a stronger claim than the latent distance already measured. It needs a GPU.
+- **Phase 4.** A lightweight decoder-side post-filter to recover quality. The design is still to be decided. It would show whether a cheap correction after the decoder can raise reconstruction quality.
 
 ## Published numbers
 
@@ -60,7 +67,7 @@ The long form of each phase is in the sections below and in [docs/learn/](docs/l
 
 ## Repository layout
 
-CPU code, tests, and codec baselines live in the package. GPU runs (VAE inference, post-filter training) live in notebooks and run on Colab.
+CPU code, tests, and codec baselines live in the package. GPU runs (VAE inference) live in notebooks and run on Colab.
 
 ```text
 src/latentcodecbench/    importable package
@@ -69,7 +76,7 @@ src/latentcodecbench/    importable package
   codecs/                x264, x265, SVT-AV1 (phase 1)
   vaes/                  Wan, LTX-Video, HunyuanVideo wrappers (phase 2)
   analysis/              rate-distortion, BD-rate, codec-leak probes (phases 1–3)
-  postfilter/            decoder-side network (phase 4)
+  postfilter/            decoder-side post-filter (phase 4, design open)
   testing.py             synthetic clips for tests
   cli.py                 `lcb` entry point
 tests/                   pytest
@@ -181,4 +188,6 @@ Metrics and codec baselines need an ffmpeg that includes libx264, libx265, libsv
 
 ## License
 
-MIT. Copyright (c) 2026 Shuvam Mukherjee. See [LICENSE](LICENSE).
+The code in this repository is MIT. Copyright (c) 2026 Shuvam Mukherjee. See [LICENSE](LICENSE).
+
+The VAE weights are not in git, and they are not under that MIT license. Wan2.1 and Wan2.2 are Apache-2.0. The pinned LTX-Video `vae/` file is the 2B v0.9 weight under RAIL-M (academic and research use); the LTXV Open Weights License 0.X covers 0.9.6 and later and does not cover that file. HunyuanVideo is under the Tencent Hunyuan Community License, which does not apply in the EU, the UK, or South Korea, and whose section 5(b) restricts using the weights to improve other AI models. Revisions and license URLs are in [docs/learn/07-pins-and-licenses.md](docs/learn/07-pins-and-licenses.md) and [ADR-0008](docs/decisions/0008-vae-checkpoints.md). Clip licenses are in [DATA.md](DATA.md).
