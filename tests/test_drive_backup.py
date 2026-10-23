@@ -40,6 +40,7 @@ from latentcodecbench.analysis.propagation import (
     PropagationRow,
     merge_propagation,
     read_propagation,
+    reconcile_with_drive,
     resume_local,
     write_propagation,
 )
@@ -641,3 +642,107 @@ def test_service_accepts_an_access_token_without_a_client_secret(
     assert isinstance(loaded, _Creds)
     assert loaded.token == "ya29.test"
     assert built["api"] == "drive"
+
+
+def _write_rows(path: Path, rows: list[PropagationRow]) -> None:
+    write_propagation(path, rows)
+
+
+def test_reconcile_fills_a_short_local_file_from_drive(tmp_path: Path) -> None:
+    local = tmp_path / "local.csv"
+    remote = tmp_path / "remote.csv"
+    _write_rows(local, [_row(clip_id="alpha")])
+    _write_rows(remote, [_row(clip_id="alpha"), _row(clip_id="beta"), _row(clip_id="gamma")])
+    assert reconcile_with_drive(local, remote) == "ok"
+    assert {row.clip_id for row in read_propagation(local)} == {"alpha", "beta", "gamma"}
+
+
+def test_reconcile_refuses_a_config_mismatch_and_leaves_local_alone(tmp_path: Path) -> None:
+    local = tmp_path / "local.csv"
+    remote = tmp_path / "remote.csv"
+    _write_rows(local, [_row(clip_id="alpha")])
+    _write_rows(remote, [_row(clip_id="beta", config_sha256="d" * 64)])
+    before = local.read_text(encoding="utf-8")
+    assert reconcile_with_drive(local, remote) == "refused-config"
+    assert local.read_text(encoding="utf-8") == before
+
+
+def test_reconcile_accepts_an_empty_drive_file(tmp_path: Path) -> None:
+    local = tmp_path / "local.csv"
+    remote = tmp_path / "remote.csv"
+    remote.write_text("", encoding="utf-8")
+    _write_rows(local, [_row(clip_id="alpha")])
+    assert reconcile_with_drive(local, remote) == "ok"
+
+
+def _ready_credentials(tmp_path: Path) -> tuple[Path, Path]:
+    credentials = tmp_path / "drive-credentials.json"
+    future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    write_authorized_user(credentials, {"token": "tok", "expiry": future})
+    file_id_path = tmp_path / "artifact-propagation.id"
+    file_id_path.write_text("file-1\n", encoding="utf-8")
+    return credentials, file_id_path
+
+
+def test_push_merges_drive_rows_before_uploading(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    credentials, file_id_path = _ready_credentials(tmp_path)
+    csv_path = tmp_path / "artifact-propagation.csv"
+    _write_rows(csv_path, [_row(clip_id="alpha")])
+    drive_rows = [_row(clip_id=name) for name in ("alpha", "beta", "gamma", "delta")]
+    uploaded: list[set[str]] = []
+
+    def download(path: Path, file_id: str, dest: Path, *, timeout: float) -> str:
+        del path, file_id, timeout
+        _write_rows(dest, drive_rows)
+        return "ok"
+
+    def upload(path: Path, file_id: str, source: Path, *, timeout: float) -> str:
+        del path, file_id, timeout
+        uploaded.append({row.clip_id for row in read_propagation(source)})
+        return "ok"
+
+    monkeypatch.setattr("latentcodecbench.analysis.drive_backup.download_file", download)
+    monkeypatch.setattr("latentcodecbench.analysis.drive_backup.upload_file", upload)
+    status = push_local_csv(
+        credentials, file_id_path, csv_path, timeout=5, reconcile=reconcile_with_drive
+    )
+    assert status == "ok"
+    assert uploaded == [{"alpha", "beta", "gamma", "delta"}]
+
+
+@pytest.mark.parametrize(
+    ("download_status", "reconcile_status"),
+    [("timeout", "ok"), ("ok", "refused-fewer-rows")],
+)
+def test_push_does_not_upload_when_drive_cannot_be_merged(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    download_status: str,
+    reconcile_status: str,
+) -> None:
+    credentials, file_id_path = _ready_credentials(tmp_path)
+    csv_path = tmp_path / "artifact-propagation.csv"
+    _write_rows(csv_path, [_row(clip_id="alpha")])
+    uploads: list[Path] = []
+
+    def download(path: Path, file_id: str, dest: Path, *, timeout: float) -> str:
+        del path, file_id, dest, timeout
+        return download_status
+
+    def upload(path: Path, file_id: str, source: Path, *, timeout: float) -> str:
+        del path, file_id, timeout
+        uploads.append(source)
+        return "ok"
+
+    def reconcile(local: Path, remote: Path) -> str:
+        del local, remote
+        return reconcile_status
+
+    monkeypatch.setattr("latentcodecbench.analysis.drive_backup.download_file", download)
+    monkeypatch.setattr("latentcodecbench.analysis.drive_backup.upload_file", upload)
+    status = push_local_csv(credentials, file_id_path, csv_path, timeout=5, reconcile=reconcile)
+    assert status == ("timeout" if download_status != "ok" else reconcile_status)
+    assert uploads == []

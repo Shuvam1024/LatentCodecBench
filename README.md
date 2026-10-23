@@ -15,9 +15,9 @@ LatentCodecBench measures the variational autoencoders inside open video generat
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 0. Foundation | Package, CI, docs | Done |
-| 1. Data and classic codecs | Clips, metrics, x264 / x265 / SVT-AV1 | In review |
-| 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Not started |
-| 3. Codec leak | Source-codec artifacts in the latent | Not started |
+| 1. Data and classic codecs | Clips, metrics, x264 / x265 / SVT-AV1 | Done |
+| 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Done |
+| 3. Codec leak | Source-codec artifacts in the latent | 3.1–3.2 done; 3.3 probe needs a GPU run |
 | 4. Post-filter | Tiny decoder-side network, fixed compute | Not started |
 | 5. Write-up | Report, figures, public release | Not started |
 
@@ -106,7 +106,19 @@ The same rows against the Phase 1 codecs, with the Phase 1 PCHIP. Depth 2 is lef
 
 ## Source artifacts
 
-Phase 3 asks whether compression in the source is still visible in the VAE latent. The study re-encodes each clip with x264, x265, and SVT-AV1 at three CRF points taken from the Phase 1 ladders, then compares the clean latent with the degraded one. The plan, the metric definitions, and the L4 time estimate are in [docs/learn/10-artifact-propagation.md](docs/learn/10-artifact-propagation.md). [ADR-0012](docs/decisions/0012-artifact-propagation.md). The measured table is not in the repo yet.
+Phase 3 asks whether compression in the source is still visible in the VAE latent. The study re-encodes each clip with x264, x265, and SVT-AV1 at three CRF points taken from the Phase 1 ladders, then compares the clean latent with the degraded one. The definitions and the full reading are in [docs/learn/10-artifact-propagation.md](docs/learn/10-artifact-propagation.md). [ADR-0012](docs/decisions/0012-artifact-propagation.md).
+
+The table is [docs/results/artifact-propagation.csv](docs/results/artifact-propagation.csv): 1224 rows, 34 clips, four VAEs, x264 and x265 at CRF 18, 30, 38 and SVT-AV1 at CRF 28, 49, 63. Run id `20261021T214039Z-933d37d99d88-3d42134b58f8`, bfloat16 on an NVIDIA L4. Medians over the clips:
+
+- **The damage reaches the latent, and grows with CRF.** Relative L2 to the clean latent rises with CRF on every clip, VAE, and codec. Through x264 CRF 18, 30, 38 it is 0.099, 0.219, 0.324 for Hunyuan and 0.188, 0.410, 0.556 for Wan2.2.
+- **The VAE copies the damage rather than repairing it.** The reconstruction is closer to the degraded input than to the clean source on all 1224 rows. At x264 CRF 38 it scores 30.26 to 30.38 dB against the clean source, next to the degraded input's 30.28 dB.
+- **Mild compression is free.** At x264/x265 CRF 18 and SVT-AV1 CRF 28 the reconstruction is within -0.03 to +0.23 dB of the clean-source reconstruction. The VAE's own error is larger than the codec's.
+- **Retention needs robust statistics.** Per-clip blocking retention reaches -1403 because the codec barely moved the score on some clips. Medians and IQRs are reported. The ringing score falls under compression on 87.7% of rows, so it reads as edge softening.
+- **x265 and SVT-AV1 did not reproduce their own files.** The degraded set was rebuilt between Colab sessions. x264 matched bit for bit; SVT-AV1 differed on 18 clips by up to 1.35 dB.
+
+![Reconstruction PSNR against the clean source](docs/results/propagation-psnr.png)
+
+![Artifact retention per clip](docs/results/propagation-retention.png)
 
 ## Quickstart
 

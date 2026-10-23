@@ -176,3 +176,19 @@ On a stock Colab L4, upgrading `google-auth` made `google.colab.auth` raise `Att
 - The install cell no longer pip-installs or upgrades `google-auth` or `google-api-python-client`. Colab's preinstalled copies are the ones the notebook uses.
 - Cell 3 calls `authenticate_user`, then `google.auth.default` with the Drive scope, then `credentials.refresh(Request())`, and saves the access token for the upload child.
 - The sweep re-reads that file on every row. A rejected token is dropped and refreshed in-process once. Re-run cell 3, then re-run the sweep: finished rows are skipped, and the local CSV is uploaded in full, including rows that were only on local disk.
+
+## 2026-10-23 — Phase 3.2, artifact-propagation results
+
+`docs/results/artifact-propagation.csv` is the finished sweep: 1224 rows, 34 clips, four VAEs, nine degraded sources. One run id (`20261021T214039Z-933d37d99d88-3d42134b58f8`), one config hash, bfloat16 on an NVIDIA L4, no duplicate keys. `scripts/summarize-artifact-propagation.py` writes the summary CSV and three figures under `docs/results/`. The reading is in `docs/learn/10-artifact-propagation.md`.
+
+- Latent relative L2 to the clean latent rises with CRF on all 408 clip, VAE, and codec curves. Hunyuan moves least (x264 18 to 38: 0.099 to 0.324), Wan2.2 most (0.188 to 0.556).
+- The reconstruction is closer to the degraded input than to the clean source on all 1224 rows.
+- At the mildest points the reconstruction is no worse than the clean-source reconstruction (median per-clip difference -0.03 to +0.23 dB). At the harshest it is 1.8 to 5.0 dB worse, and about equal to the degraded input's own PSNR.
+- Retention is summarized by median and IQR. Per-clip values reach -1403 because the denominator can be near zero. The ringing score goes down under compression on 87.7% of rows, so it is read as edge softening.
+- x265 and SVT-AV1 degraded files differ across VAEs on 17 and 18 clips (up to 0.057 and 1.35 dB). The degraded set was rebuilt between sessions and those encoders did not reproduce it. x264 did.
+- Hunyuan's `sintel_trailer` gap from step 2.4 is a 2.4 dB floor across depths 8, 10, and 12, while other clips fall about tenfold per two bits. That fits clipping at `[-4, 4]`, and stays unconfirmed without the latents.
+
+Fixes in the same change:
+
+- `push_local_csv` takes a `reconcile` callback. The notebook passes `reconcile_with_drive`, which downloads the Drive CSV, merges it into the local file, and refuses the upload when the local file would have fewer rows. A failed download also skips the upload.
+- The README status table said Phases 2 and 3 had not started.

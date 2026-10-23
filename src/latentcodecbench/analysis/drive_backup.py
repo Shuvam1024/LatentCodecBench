@@ -149,8 +149,16 @@ def push_local_csv(
     *,
     timeout: float,
     refresh: Callable[[Path], str] | None = None,
+    reconcile: Callable[[Path, Path], str] | None = None,
 ) -> str:
     """Upload the whole local CSV. Each call re-reads ``credentials``.
+
+    With ``reconcile``, the Drive copy is downloaded next to ``csv_path``
+    first and ``reconcile(csv_path, drive_copy)`` merges it into the local
+    file. Anything other than ``ok`` from that call is returned and nothing
+    is uploaded, and so is a failed download. This is what stops a short
+    local file (a fresh VM, or a resume cell that was skipped) from
+    replacing a longer Drive file.
 
     A failed call does not stick. The next call checks the file again, so
     re-running the Drive auth cell while the sweep is paused is picked up
@@ -172,6 +180,17 @@ def push_local_csv(
         )
         if not file_id:
             return status
+    if reconcile is not None:
+        drive_copy = csv_path.with_name(csv_path.stem + ".drive" + csv_path.suffix)
+        drive_copy.unlink(missing_ok=True)
+        fetched = download_file(credentials, file_id, drive_copy, timeout=timeout)
+        if fetched != "ok":
+            print(f"DRIVE download {fetched}; not uploading", file=sys.stderr)
+            return fetched
+        merged = reconcile(csv_path, drive_copy)
+        if merged != "ok":
+            print(f"DRIVE upload refused: {merged}", file=sys.stderr)
+            return merged
     status = upload_file(credentials, file_id, csv_path, timeout=timeout)
     if status != "auth-failed" or refresh is None:
         return status
