@@ -64,3 +64,7 @@ The 1224 measured rows are in `docs/results/artifact-propagation.csv`. Three dec
 **Degraded files must be built once.** `psnr_degraded_clean` differs across VAEs for the same clip and point on 17 clips for x265 (up to 0.057 dB) and 18 for SVT-AV1 (up to 1.35 dB). x264 matches everywhere. The split follows sweep order, which fits `/content/data/degraded` being rebuilt on a new VM, with x265 and SVT-AV1 producing different bytes there. Rows stay valid on their own. Cross-VAE comparisons at one SVT-AV1 point on those clips carry up to 1.35 dB of source difference. A rerun builds the degraded set once, records each file's SHA256, and ships it with the clean tarball.
 
 **Drive upload merges first.** Every upload now downloads the Drive CSV, merges it into the local file, and refuses to upload a file with fewer rows than Drive. An upload of an unmerged local file came close to replacing the full table after a restart that skipped the resume cell.
+
+## Addendum, 2026-10-23: training-data filter
+
+The filtering reading of these rows is `docs/learn/11-training-data-filter.md`. The cutoff is a rung of this ladder, not a CRF copied from one codec onto another. Pixel PSNR and latent distance answer different filters, and the note keeps them separate. Step 3.3, the linear probe, is not part of this reading.

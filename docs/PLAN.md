@@ -42,7 +42,7 @@ Wrappers: `AutoencoderKLWan` for Wan2.1 and for the Wan2.2 TI2V-5B VAE, `Autoenc
 - 3.1 Degraded sources and the propagation metrics. Three CRF points from each Phase 1 ladder (x264, x265, SVT-AV1): latent distance, luma PSNR of the degraded reconstruction against the clean source and against the degraded source, and blocking/ringing retention. ADR-0012. `scripts/degrade-sources.py` writes the y4m files. `notebooks/artifact_propagation.ipynb` is the GPU driver. Measured rows land in step 3.2.
 - 3.2 Encode through each VAE; latent distance to clean latents, artifact reconstruction. Done: `docs/results/artifact-propagation.csv` (1224 rows), `scripts/summarize-artifact-propagation.py`, results in `docs/learn/10-artifact-propagation.md`.
 - 3.3 Linear probe predicting QP from latents, cross-validated with confidence intervals.
-- 3.4 Write-up: implications for training-data filtering.
+- 3.4 Write-up: implications for training-data filtering. Done: `docs/learn/11-training-data-filter.md` reads the per-clip PSNR change against the clean reconstruction, with the latent shift beside it. `scripts/summarize-filtering.py` reprints that section, and a test checks the note against the CSVs.
 
 ## Phase 4: Decoder-side post-filter
 - 4.1 Paired dataset (VAE reconstruction, original).
