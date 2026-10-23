@@ -67,6 +67,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="CSV of per-clip overlap fractions. Pairs under 0.75 are flagged.",
     )
+    reproduce = sub.add_parser(
+        "reproduce",
+        help="Check the published tables and figures against the committed CSVs.",
+    )
+    reproduce.add_argument(
+        "--root",
+        type=Path,
+        default=Path("."),
+        help="Repository root. The command reads docs/results and the published pages.",
+    )
     return parser
 
 
@@ -82,6 +92,8 @@ def main(argv: list[str] | None = None) -> int:
         return _baselines_run(args)
     if args.command == "plot" and args.plot_command == "rd":
         return _plot_rd(args)
+    if args.command == "reproduce":
+        return _reproduce(args)
     parser.print_help()
     return 2
 
@@ -124,6 +136,23 @@ def _baselines_run(args: argparse.Namespace) -> int:
         print(exc)
         return 1
     print(f"wrote {len(rows)} rows to {args.out}")
+    return 0
+
+
+def _reproduce(args: argparse.Namespace) -> int:
+    from latentcodecbench.analysis.published import (
+        check_published,
+        headline_markdown,
+        load_published,
+    )
+
+    problems = check_published(args.root)
+    if problems:
+        for problem in problems:
+            print(problem)
+        return 1
+    print(headline_markdown(load_published(args.root)))
+    print("published pages match the committed CSVs")
     return 0
 
 
