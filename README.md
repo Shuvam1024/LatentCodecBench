@@ -19,9 +19,44 @@ LatentCodecBench measures the variational autoencoders inside open video generat
 | 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Done |
 | 3. Codec leak | Source-codec artifacts in the latent | 3.1, 3.2, and 3.4 done; 3.3 probe needs a GPU run |
 | 4. Post-filter | Tiny decoder-side network, fixed compute | Not started |
-| 5. Write-up | Report, figures, public release | Not started |
+| 5. Write-up | Report, figures, public release | 5.1 done; 5.2 report and 5.3 release not started |
 
 The full step list is in [docs/PLAN.md](docs/PLAN.md). Design notes are in [docs/decisions/](docs/decisions/). Short concept notes are in [docs/learn/](docs/learn/).
+
+## Published numbers
+
+These two tables are rebuilt from the committed CSVs. The figures are in the sections below: classic curves under `docs/figures/`, and the VAE and propagation curves under `docs/results/`.
+
+One command checks that this page, the learn notes, and the derived CSVs still match those tables, and it redraws the figures into a temporary directory. It does not re-encode a clip or run a VAE. Run it from the repository root.
+
+```bash
+uv run lcb reproduce
+```
+
+| Codec | Against | Metric | BD-rate | Clips in the mean | Mean overlap | Under 75% |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| x265 | x264 | PSNR-Y | -24.66% | 34 | 85.37% | 0 |
+| SVT-AV1 | x264 | PSNR-Y | -41.99% | 34 | 80.98% | 7 |
+| x265 | x264 | VMAF | -20.44% | 34 | 84.45% | 2 |
+| SVT-AV1 | x264 | VMAF | -44.86% | 34 | 77.66% | 12 |
+| wan2_1 | x264 | PSNR-Y | +824.24% | 33 | 32.27% | 33 |
+| wan2_1 | x264 | VMAF | +643.08% | 33 | 61.88% | 23 |
+| hunyuan | x264 | PSNR-Y | +725.09% | 32 | 35.30% | 32 |
+| hunyuan | x264 | VMAF | +583.16% | 30 | 60.80% | 24 |
+| ltx | x264 | PSNR-Y | +397.92% | 26 | 20.30% | 26 |
+| ltx | x264 | VMAF | +205.95% | 25 | 41.95% | 25 |
+| wan2_2 | x264 | PSNR-Y | +628.61% | 33 | 42.94% | 28 |
+| wan2_2 | x264 | VMAF | +568.29% | 33 | 66.02% | 24 |
+
+| VAE | Clips | Mean PSNR-Y | Mean VMAF |
+| --- | ---: | ---: | ---: |
+| wan2_1 | 34 | 34.57 dB | 86.40 |
+| hunyuan | 34 | 35.11 dB | 87.63 |
+| ltx | 34 | 32.30 dB | 74.56 |
+| wan2_2 | 34 | 35.35 dB | 87.13 |
+
+The long form of each phase is in the sections below and in [docs/learn/](docs/learn/). How the command decides that a page still matches is [docs/learn/12-reproducing-the-tables.md](docs/learn/12-reproducing-the-tables.md).
+
 
 ## Repository layout
 
@@ -130,7 +165,10 @@ cd LatentCodecBench
 uv sync
 uv run lcb --version
 uv run pytest
+uv run lcb reproduce
 ```
+
+`lcb reproduce` checks the published tables against the committed CSVs. It does not re-run the GPU sweeps.
 
 `uv sync` installs the CPU environment from `uv.lock`: NumPy, Ruff, mypy, and pytest. PyTorch and Diffusers are optional, for later phases:
 

@@ -52,6 +52,6 @@ Wrappers: `AutoencoderKLWan` for Wan2.1 and for the Wan2.2 TI2V-5B VAE, `Autoenc
 - 4.5 Optional: Wan2.1-1.3B generations with/without the filter, VBench quality subset.
 
 ## Phase 5: Write-up and release
-- 5.1 README with results table, figures, one-command reproduction.
+- 5.1 README with results table, figures, one-command reproduction. Done: `uv run lcb reproduce` rebuilds the headline in the README and in `docs/learn/12-reproducing-the-tables.md` from the committed CSVs, checks the long tables, and redraws the figures into a temporary directory. It does not re-run a codec or a VAE.
 - 5.2 `docs/REPORT.md` technical report with CIs and limitations.
 - 5.3 Make repo public, tag v1.0, pin on profile, short post draft.

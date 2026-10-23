@@ -200,3 +200,11 @@ Note 10 measured the leak. This change says which rung of that ladder a training
 - The pixel number is the median, over clips, of reconstruction PSNR against the clean source minus the clean-source reconstruction. Median latent relative L2 is printed beside it, because a flat pixel score is not a still latent.
 - `scripts/summarize-filtering.py` reprints that section. `docs/learn/11-training-data-filter.md` is the printout plus the filter it supports. A test checks that the note still contains the printout.
 - The cutoff is a rung of each codec's own ladder. A CRF does not travel from x264 onto SVT-AV1. The linear probe is still unrun.
+
+## 2026-10-23 — Phase 5.1, published tables and one command
+
+The README already had the long sections. This change puts one rebuilt table at the top and a command that fails when that table, the learn notes, or a derived CSV drifts from the committed rows.
+
+- `lcb reproduce` reads the classic, reconstruction, bitrate, and propagation CSVs. It checks the headline, notes 09 through 11, `vae-rd-bdrate.csv`, and `artifact-propagation-summary.csv`. It redraws the figures in a temporary directory and leaves the committed PNGs alone.
+- The command does not download clips, encode them, or load a VAE. Those steps stay `lcb data fetch`, `lcb baselines run`, and the Colab notebooks.
+- `docs/learn/12-reproducing-the-tables.md`.
