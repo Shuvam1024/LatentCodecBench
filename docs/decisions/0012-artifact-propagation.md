@@ -52,3 +52,15 @@ A restart downloads the Drive CSV and merges it into the local file. The local r
 **Copy through `/content/drive` when that directory is already mounted.** A fresh runtime never has the directory, so the backup never runs. An API call by file id does not need a mount.
 
 **Replace the local CSV with the Drive file at startup.** A row written locally and not yet uploaded would disappear. The merge keeps the local row for a shared key and fills keys only the Drive file has.
+
+## Addendum, 2026-10-23: reading the results
+
+The 1224 measured rows are in `docs/results/artifact-propagation.csv`. Three decisions came out of reading them.
+
+**Summary statistic.** Retention ratios are summarized by median and interquartile range, with the pooled ratio `sum(recon - clean) / sum(degraded - clean)` alongside. A near-zero denominator produced per-clip values down to -1403, so a mean is meaningless. A denominator floor was rejected because its threshold would decide which rows count: 111 rows have a blocking gap under 0.01 code values. The pooled ratio weights clips by the artifact the codec actually added, and it agrees with the median in sign and trend in every group.
+
+**What ringing measures here.** On 87.7% of rows the degraded source scores lower than the clean source. At these CRFs the encoders soften edges more than they overshoot, so the score is reported as near-edge detail. A retention above 1 is read as "smoother than the degraded input", not "more ringing".
+
+**Degraded files must be built once.** `psnr_degraded_clean` differs across VAEs for the same clip and point on 17 clips for x265 (up to 0.057 dB) and 18 for SVT-AV1 (up to 1.35 dB). x264 matches everywhere. The split follows sweep order, which fits `/content/data/degraded` being rebuilt on a new VM, with x265 and SVT-AV1 producing different bytes there. Rows stay valid on their own. Cross-VAE comparisons at one SVT-AV1 point on those clips carry up to 1.35 dB of source difference. A rerun builds the degraded set once, records each file's SHA256, and ships it with the clean tarball.
+
+**Drive upload merges first.** Every upload now downloads the Drive CSV, merges it into the local file, and refuses to upload a file with fewer rows than Drive. An upload of an unmerged local file came close to replacing the full table after a restart that skipped the resume cell.

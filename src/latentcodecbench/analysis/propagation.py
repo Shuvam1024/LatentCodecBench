@@ -439,6 +439,26 @@ def resume_local(local_path: Path, remote_path: Path | None) -> tuple[str, int]:
     return "merged", len(merged)
 
 
+def reconcile_with_drive(local_path: Path, remote_path: Path) -> str:
+    """Merge the Drive copy into ``local_path``, then check the row counts.
+
+    Returns ``ok`` when the merged local file holds at least every Drive
+    row. Returns ``refused-config`` when the two files were built from
+    different ladders, and ``refused-fewer-rows`` when the local file
+    would still be shorter than Drive. Only ``ok`` may be uploaded.
+    """
+    remote_rows = read_propagation(remote_path) if remote_path.is_file() else []
+    try:
+        _status, count = resume_local(local_path, remote_path)
+    except PropagationError as exc:
+        print(f"reconcile: {exc}", flush=True)
+        return "refused-config"
+    if count < len(remote_rows):
+        print(f"reconcile: local {count} rows < Drive {len(remote_rows)} rows", flush=True)
+        return "refused-fewer-rows"
+    return "ok"
+
+
 def _index(rows: list[PropagationRow]) -> dict[tuple[str, str, str, int], PropagationRow]:
     found: dict[tuple[str, str, str, int], PropagationRow] = {}
     for row in rows:
