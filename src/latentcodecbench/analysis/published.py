@@ -27,6 +27,7 @@ from latentcodecbench.analysis.propagation_summary import (
     summarize,
     summary_markdown,
 )
+from latentcodecbench.analysis.report_tables import recon_interval_markdown, report_numbers
 from latentcodecbench.analysis.table import ResultRow, read_results
 from latentcodecbench.analysis.vae_rd import (
     DISPLAY,
@@ -120,6 +121,12 @@ def check_published(root: Path) -> list[str]:
         ),
         root / "docs" / "learn" / "11-training-data-filter.md": filtering_report(
             tables.propagation, tables.recon
+        ),
+        root / "docs" / "REPORT.md": report_numbers(
+            tables.classic, tables.recon, tables.bitrate, tables.propagation
+        ),
+        root / "docs" / "learn" / "13-confidence-intervals.md": recon_interval_markdown(
+            tables.recon
         ),
     }
     for path, text in expected.items():

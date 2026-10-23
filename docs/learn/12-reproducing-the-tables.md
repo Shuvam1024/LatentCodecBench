@@ -6,7 +6,7 @@ The GPU sweeps are not a command on this machine. The rows they wrote are the CS
 uv run lcb reproduce
 ```
 
-Run it from the repository root. It reads the classic baseline CSV, the VAE reconstruction CSV, the latent-bitrate CSV, and the artifact-propagation CSV. It rebuilds the headline below, the BD-rate table in note 09, the propagation table in note 10, and the training-filter section in note 11. It fails if a published page no longer contains that text, or if `vae-rd-bdrate.csv` or `artifact-propagation-summary.csv` no longer matches its renderer. It redraws the figures into a temporary directory and checks that the PNGs are non-empty. It does not replace the committed PNGs. Matplotlib does not promise the same bytes on a second draw.
+Run it from the repository root. It reads the classic baseline CSV, the VAE reconstruction CSV, the latent-bitrate CSV, and the artifact-propagation CSV. It rebuilds the headline below, the BD-rate table in note 09, the propagation table in note 10, the training-filter section in note 11, the measured section of `docs/REPORT.md`, and the reconstruction intervals in note 13. It fails if a published page no longer contains that text, or if `vae-rd-bdrate.csv` or `artifact-propagation-summary.csv` no longer matches its renderer. It redraws the figures into a temporary directory and checks that the PNGs are non-empty. It does not replace the committed PNGs. Matplotlib does not promise the same bytes on a second draw.
 
 What the command cannot do is the measurement. `lcb data fetch` downloads the clips. `lcb baselines run` repeats the classic sweep, and it needs the pinned ffmpeg. The VAE rows come from the notebooks on a GPU. Re-running those is a different job from checking the pages.
 
