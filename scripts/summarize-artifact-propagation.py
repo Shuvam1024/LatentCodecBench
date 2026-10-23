@@ -40,9 +40,7 @@ def main(argv: list[str] | None = None) -> int:
         print(summary_markdown(summary))
         print()
         for codec, (clips, worst) in degraded_source_mismatches(rows).items():
-            print(
-                f"{codec}: {clips} clips differ across VAEs, max {worst:.4f} dB"
-            )
+            print(f"{codec}: {clips} clips differ across VAEs, max {worst:.4f} dB")
         if args.write:
             dest = Path("docs/results/artifact-propagation-summary.csv")
             dest.write_text(render_summary_csv(summary), encoding="utf-8")
