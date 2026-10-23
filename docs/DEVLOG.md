@@ -216,3 +216,12 @@ The headline is a point estimate. This change puts a 95% Student-t interval arou
 - `docs/REPORT.md` holds the reconstruction intervals, the BD-rate intervals against x264, the degraded-source mismatch, and the limitations. The measured block is rebuilt from the CSVs. `lcb reproduce` fails if the report drops it.
 - The interval uses the clips that enter the published mean. Undefined BD-rate clips stay out of it. A one-point sample has no interval.
 - `docs/learn/13-confidence-intervals.md`. The clip list is designed, so the interval is clip-to-clip spread of the mean, not a claim about all video and not the error of one forward.
+
+## 2026-10-23 — v1.0.0 release
+
+The measured work stops at the report. This change records what is left, and what the public release contains.
+
+- Step 3.3 and Phase 4 move to Future work in the plan, the README, and the report. The probe would test whether source QP or CRF is linearly readable from the latent. Phase 4 is a lightweight decoder-side post-filter to recover quality. Its design is not chosen, and it has not been run.
+- Phase 5.3 is the public repository, the v1.0.0 tag, and the GitHub release. Pinning the repository on a GitHub profile stays a manual account setting.
+- `CHANGELOG.md` is the v1.0.0 note. The Python package version stays 0.0.1.
+- The README license section points at the MIT code license, at note 07 and ADR-0008 for the VAE weights, and at `DATA.md` for the clips. The weights are not in git.

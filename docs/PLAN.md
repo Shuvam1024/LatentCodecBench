@@ -1,6 +1,6 @@
 # LatentCodecBench: Project Plan
 
-**Question:** Open video VAEs (the "codec" inside every latent video generator) vs. classic codecs (x264, x265, SVT-AV1): how do they compare on rate-distortion, temporal stability, and throughput? Do classic-codec artifacts in training video leak into VAE latents? Can a tiny decoder-side post-filter recover quality at a fixed compute budget?
+**Question:** Open video VAEs (the "codec" inside every latent video generator) vs. classic codecs (x264, x265, SVT-AV1): how do they compare on rate-distortion, temporal stability, and throughput? Do classic-codec artifacts in training video leak into VAE latents? Whether a lightweight decoder-side post-filter can recover quality is an open direction; the design is not decided.
 
 **Compute:** CPU (cloud dev VM, GitHub Actions) for code, tests, and codec baselines. Colab Pro GPU (L4/A100) for VAE runs and training, through notebooks in `notebooks/`.
 
@@ -41,17 +41,16 @@ Wrappers: `AutoencoderKLWan` for Wan2.1 and for the Wan2.2 TI2V-5B VAE, `Autoenc
 ## Phase 3: Codec-leak study
 - 3.1 Degraded sources and the propagation metrics. Three CRF points from each Phase 1 ladder (x264, x265, SVT-AV1): latent distance, luma PSNR of the degraded reconstruction against the clean source and against the degraded source, and blocking/ringing retention. ADR-0012. `scripts/degrade-sources.py` writes the y4m files. `notebooks/artifact_propagation.ipynb` is the GPU driver. Measured rows land in step 3.2.
 - 3.2 Encode through each VAE; latent distance to clean latents, artifact reconstruction. Done: `docs/results/artifact-propagation.csv` (1224 rows), `scripts/summarize-artifact-propagation.py`, results in `docs/learn/10-artifact-propagation.md`.
-- 3.3 Linear probe predicting QP from latents, cross-validated with confidence intervals.
 - 3.4 Write-up: implications for training-data filtering. Done: `docs/learn/11-training-data-filter.md` reads the per-clip PSNR change against the clean reconstruction, with the latent shift beside it. `scripts/summarize-filtering.py` reprints that section, and a test checks the note against the CSVs.
 
-## Phase 4: Decoder-side post-filter
-- 4.1 Paired dataset (VAE reconstruction, original).
-- 4.2 compsr-style tiny CNN with a MAC counter test enforcing <= 5k MACs/pixel.
-- 4.3 Train on Colab; report dB gain, BD-rate, ms/frame.
-- 4.4 ONNX export + numerical parity test.
-- 4.5 Optional: Wan2.1-1.3B generations with/without the filter, VBench quality subset.
+Step 3.3, the linear probe, is future work. It was not run.
 
 ## Phase 5: Write-up and release
 - 5.1 README with results table, figures, one-command reproduction. Done: `uv run lcb reproduce` rebuilds the headline in the README and in `docs/learn/12-reproducing-the-tables.md` from the committed CSVs, checks the long tables, and redraws the figures into a temporary directory. It does not re-run a codec or a VAE.
 - 5.2 `docs/REPORT.md` technical report with CIs and limitations. Done: the report's measured section is a 95% Student-t interval across clips, rebuilt from the committed CSVs. `docs/learn/13-confidence-intervals.md` says what that interval is claiming. `lcb reproduce` checks both.
-- 5.3 Make repo public, tag v1.0, pin on profile, short post draft.
+- 5.3 Public release. Done: the repository is public, tagged v1.0.0, with a GitHub release. Pinning the repository on a GitHub profile is a manual account setting and is not part of this tag.
+
+## Future work
+
+- **3.3 Linear probe.** Predict the source QP or CRF from the latent, cross-validated, with confidence intervals. That would show whether the source quantizer is linearly readable, a stronger claim than the latent having moved. It needs a GPU. No probe has been run.
+- **Phase 4, decoder-side post-filter.** A lightweight filter after the decoder, to recover quality. The design is still to be decided. It has not been run. It would show whether a cheap correction after decoding can raise the reconstruction the VAE already measured.

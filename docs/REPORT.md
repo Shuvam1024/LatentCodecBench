@@ -2,7 +2,7 @@
 
 ## Question
 
-How do the VAEs inside open video generators compare with x264, x265, and SVT-AV1 on rate-distortion, and does compression in the source still show up in the latent? A decoder-side post-filter was part of the plan. It has not been run.
+How do the VAEs inside open video generators compare with x264, x265, and SVT-AV1 on rate-distortion, and does compression in the source still show up in the latent?
 
 ## What was measured
 
@@ -56,7 +56,13 @@ Hunyuan ran with spatial tiling. The VAE tables are bfloat16 on an L4.
 
 The degraded-source mismatch is the last line of the results. A cross-VAE comparison on a codec that does not match carries that source gap. x264 is the column that matches.
 
-The linear probe of source CRF from the latent has not been run. The decoder-side post-filter has not been run. Clips whose source was already compressed stay in the means. The latent tensors are not in the repo, so a clipping account of one clip's quantization floor stays a hypothesis. Note 10 records that hypothesis.
+Clips whose source was already compressed stay in the means. The latent tensors are not in the repo, so a clipping account of one clip's quantization floor stays a hypothesis. Note 10 records that hypothesis.
+
+## Future work
+
+A linear probe that predicts source QP or CRF from the latent has not been run. It would test whether the source quantizer is linearly readable, a stronger claim than the latent distance in the results above. It needs a GPU.
+
+A lightweight decoder-side post-filter to recover quality is an open direction. The design is still to be decided. It has not been run. It would test whether a cheap correction after the decoder can raise the reconstruction this report already measured.
 
 ## Reproduce
 

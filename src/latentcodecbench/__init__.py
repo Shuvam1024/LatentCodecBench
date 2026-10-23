@@ -7,7 +7,7 @@ Modules follow the project phases:
 - :mod:`latentcodecbench.codecs` — x264, x265, and SVT-AV1 baselines
 - :mod:`latentcodecbench.vaes` — open video VAE wrappers
 - :mod:`latentcodecbench.analysis` — rate-distortion and codec-leak studies
-- :mod:`latentcodecbench.postfilter` — a tiny decoder-side post-filter
+- :mod:`latentcodecbench.postfilter` — placeholder for a decoder-side post-filter
 """
 
 from importlib.metadata import PackageNotFoundError, version
