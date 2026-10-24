@@ -225,3 +225,11 @@ The measured work stops at the report. This change records what is left, and wha
 - Phase 5.3 is the public repository, the v1.0.0 tag, and the GitHub release. Pinning the repository on a GitHub profile stays a manual account setting.
 - `CHANGELOG.md` is the v1.0.0 note. The Python package version stays 0.0.1.
 - The README license section points at the MIT code license, at note 07 and ADR-0008 for the VAE weights, and at `DATA.md` for the clips. The weights are not in git.
+
+## 2026-10-24 — Phase 3.3, linear probe, CPU side
+
+The distance in note 10 is not yet a readout. This change adds the probe that would say whether source CRF is linearly readable, and stops before the GPU feature sweep.
+
+- Features are per-channel mean, standard deviation, and mean absolute value, padded to 128 channels, plus high-frequency energy, and the same block on the difference from the clean posterior mean. Six luma numbers are the pixel baseline. The clean clip is stored too. `source_sha256` is the y4m that was encoded.
+- The fit is leave-clip-out ridge, per VAE and per codec, with chance and the pixel baseline. Classification is ridge onto the three rung indicators. The interval is a 95% bootstrap over clips. `lcb probe fit` writes the table, the figure, and the marked section of `docs/learn/14-linear-probe.md`.
+- `notebooks/latent_probe_features.ipynb` encodes and does not decode. It reuses the clean tarball, the degrade step, and the Drive merge that refuses a shorter upload. 1360 rows once it finishes. The feature CSV is not in the repo, so 3.3 stays in Future work.
