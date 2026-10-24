@@ -4,7 +4,8 @@ Phase 1 stores one CSV of classic-codec operating points and draws the
 rate-distortion curves. BD-rate is a PCHIP integral, the piecewise cubic
 used by the JCT-VC common test conditions. Phase 2 puts quantized VAE
 latents on the same axes. Phase 3 measures how far a re-encoded source
-moves the latent.
+moves the latent, and whether a linear probe can read the source CRF
+back out of latent statistics.
 """
 
 from latentcodecbench.analysis.bdrate import (

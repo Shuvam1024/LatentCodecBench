@@ -31,6 +31,7 @@ from latentcodecbench.analysis.drive_backup import (
 )
 from latentcodecbench.analysis.drive_worker import (
     ensure_csv,
+    ensure_named,
     find_named,
     main,
     upload_media,
@@ -329,6 +330,18 @@ class _Service:
 
     def files(self) -> _Files:
         return self._files
+
+
+def test_ensure_named_reuses_an_id_and_rejects_a_path(tmp_path: Path) -> None:
+    del tmp_path
+    store = _Store()
+    service = _Service(store)
+    first = ensure_named(service, "latent-probe-features.csv")
+    second = ensure_named(service, "latent-probe-features.csv")
+    assert first == second
+    assert store.creates.count("latent-probe-features.csv") == 1
+    with pytest.raises(ValueError, match="refusing"):
+        ensure_named(service, "../latent-probe-features.csv")
 
 
 def test_ensure_csv_reuses_the_file_id_and_upload_updates_it(tmp_path: Path) -> None:

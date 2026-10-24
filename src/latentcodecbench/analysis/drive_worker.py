@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Any
 
 from latentcodecbench.analysis.drive_backup import (
-    CSV_NAME,
     DRIVE_FOLDER,
     RESULTS_FOLDER,
+    check_results_name,
 )
 
 _FOLDER = "application/vnd.google-apps.folder"
@@ -36,7 +36,10 @@ def main(argv: list[str] | None = None) -> int:
         return int(exc.code) if isinstance(exc.code, int) else 1
     try:
         if command == "ensure-csv":
-            print(ensure_csv(service))
+            print(ensure_named(service, "artifact-propagation.csv"))
+            return 0
+        if command == "ensure-named" and len(rest) == 1:
+            print(ensure_named(service, rest[0]))
             return 0
         if command == "download" and len(rest) == 2:
             download_media(service, rest[0], Path(rest[1]))
@@ -61,20 +64,26 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def ensure_csv(service: Any) -> str:
-    """File id of ``LatentCodecBench/results/artifact-propagation.csv``.
+    """File id of ``LatentCodecBench/results/artifact-propagation.csv``."""
+    return ensure_named(service, "artifact-propagation.csv")
 
-    The folder and the file are created when they are absent. A second
-    call returns the same id.
+
+def ensure_named(service: Any, name: str) -> str:
+    """File id of ``LatentCodecBench/results/<name>``, created when absent.
+
+    A second call returns the same id. ``name`` has to be one CSV file
+    name, not a path.
     """
+    checked = check_results_name(name)
     top = ensure_folder(service, DRIVE_FOLDER, "root")
     results = ensure_folder(service, RESULTS_FOLDER, top)
-    existing = find_child(service, CSV_NAME, results)
+    existing = find_child(service, checked, results)
     if existing is not None:
         return existing
     created = (
         service.files()
         .create(
-            body={"name": CSV_NAME, "mimeType": "text/csv", "parents": [results]},
+            body={"name": checked, "mimeType": "text/csv", "parents": [results]},
             fields="id",
         )
         .execute()

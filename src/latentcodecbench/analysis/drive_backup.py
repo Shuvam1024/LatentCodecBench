@@ -19,6 +19,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -32,6 +33,7 @@ DRIVE_FOLDER = "LatentCodecBench"
 RESULTS_FOLDER = "results"
 CSV_NAME = "artifact-propagation.csv"
 TARBALL_NAME = "canonical-clips.tar"
+_RESULTS_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.csv$")
 DRIVE_SCOPE = "https://www.googleapis.com/auth/drive"
 CSV_TIMEOUT = 60.0
 TARBALL_TIMEOUT = 600.0
@@ -200,9 +202,30 @@ def push_local_csv(
     return upload_file(credentials, file_id, csv_path, timeout=timeout)
 
 
+def check_results_name(name: str) -> str:
+    """Reject a results file name that is not a single CSV path segment."""
+    if _RESULTS_NAME.fullmatch(name) is None:
+        raise ValueError(f"refusing results name {name!r}")
+    return name
+
+
 def ensure_results_file(credentials: Path, *, timeout: float = CSV_TIMEOUT) -> tuple[str, str]:
-    """Return ``(status, file_id)`` for the results CSV, creating it if needed."""
-    status, stdout, _stderr = drive_call(["ensure-csv", str(credentials)], timeout=timeout)
+    """Return ``(status, file_id)`` for the propagation CSV, creating it if needed."""
+    return ensure_named_file(credentials, CSV_NAME, timeout=timeout)
+
+
+def ensure_named_file(
+    credentials: Path,
+    name: str,
+    *,
+    timeout: float = CSV_TIMEOUT,
+) -> tuple[str, str]:
+    """Return ``(status, file_id)`` for ``LatentCodecBench/results/<name>``."""
+    checked = check_results_name(name)
+    status, stdout, _stderr = drive_call(
+        ["ensure-named", str(credentials), checked],
+        timeout=timeout,
+    )
     if status != "ok":
         return status, ""
     file_id = stdout.strip().splitlines()[-1] if stdout.strip() else ""
@@ -271,19 +294,29 @@ def status_lines(
     *,
     file_id: str,
     drive_status: str,
+    filename: str = CSV_NAME,
+    read_rows: Callable[[Path], list[Any]] | None = None,
 ) -> list[str]:
-    """Local and Drive row counts for the notebook status cell."""
-    from latentcodecbench.analysis.propagation import read_propagation
+    """Local and Drive row counts for the notebook status cell.
 
-    local_count = len(read_propagation(local_path)) if local_path.is_file() else 0
-    location = f"My Drive/{DRIVE_FOLDER}/{RESULTS_FOLDER}/{CSV_NAME}"
+    ``read_rows`` defaults to the propagation reader. A notebook that
+    writes a different CSV passes its own reader and ``filename``.
+    """
+    if read_rows is None:
+        from latentcodecbench.analysis.propagation import read_propagation
+
+        reader: Callable[[Path], list[Any]] = read_propagation
+    else:
+        reader = read_rows
+    local_count = len(reader(local_path)) if local_path.is_file() else 0
+    location = f"My Drive/{DRIVE_FOLDER}/{RESULTS_FOLDER}/{filename}"
     lines = [f"local {local_count} rows {local_path}"]
     readable = drive_status == "ok" and remote_path is not None and remote_path.is_file()
     if not readable:
         lines.append(f"drive {drive_status} {location}")
         return lines
     assert remote_path is not None
-    remote_count = 0 if remote_path.stat().st_size == 0 else len(read_propagation(remote_path))
+    remote_count = 0 if remote_path.stat().st_size == 0 else len(reader(remote_path))
     ident = file_id or "(no id)"
     lines.append(f"drive {remote_count} rows {location} id={ident}")
     return lines

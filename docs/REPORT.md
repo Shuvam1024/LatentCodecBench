@@ -60,7 +60,7 @@ Clips whose source was already compressed stay in the means. The latent tensors 
 
 ## Future work
 
-A linear probe that predicts source QP or CRF from the latent has not been run. It would test whether the source quantizer is linearly readable, a stronger claim than the latent distance in the results above. It needs a GPU.
+A linear probe of source CRF from the latent is specified in ADR-0013. The feature table has not been measured, so this report has no probe result. The probe would test whether the source quantizer is linearly readable, a stronger claim than the latent distance in the results above. The sweep needs a GPU.
 
 A lightweight decoder-side post-filter to recover quality is an open direction. The design is still to be decided. It has not been run. It would test whether a cheap correction after the decoder can raise the reconstruction this report already measured.
 

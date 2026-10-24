@@ -100,4 +100,22 @@ The config hash is the SHA256 of `configs/vae-bitrate.yaml`. A second run that s
 | `encode_seconds`, `decode_seconds` | Wall clock of the degraded encode and its decode. |
 | `runtime_dtype`, `gpu_name` | The runtime that produced the row. |
 
+`latent-probe-features.csv` is the step 3.3 feature table. The Colab notebook writes it to `My Drive/LatentCodecBench/results/latent-probe-features.csv`. It is not committed until that file is copied in. One row is one clip, one VAE, and one source. The source is `clean`, with an empty `source_crf`, or one study point. Rows sort by `clip_id`, VAE order, then source. The resume key is `(clip_id, vae, source_codec, source_crf)`. A second config hash is refused. 34 clips, four VAEs, and ten sources are 1360 rows. ADR-0013.
+
+| Column | Meaning |
+| --- | --- |
+| `run_id`, `git_sha`, `config_sha256` | Same idea as the classic table. The config hash covers the study ladder, the presets, and the feature names. |
+| `clip_id`, `vae` | Canonical clip id, and `wan2_1`, `hunyuan`, `ltx`, or `wan2_2`. |
+| `source_codec`, `source_crf`, `preset` | `clean` and an empty CRF for the clean clip. Otherwise the study codec, its CRF, and the Phase 1 preset. |
+| `source_sha256` | SHA256 of the y4m that was encoded. |
+| `width`, `height`, `frames` | Geometry of that y4m. |
+| `latent_shape` | `channels x time x height x width`, without the batch axis. |
+| `encode_seconds` | Wall clock of that encode. There is no decode column. |
+| `runtime_dtype`, `gpu_name` | The runtime that produced the row. |
+| `latent_*`, `delta_*` | Per-channel mean, standard deviation, and mean absolute value, padded to 128 channels, plus high-frequency energy. `delta_*` is the degraded posterior mean minus the clean one. A clean row has zeros there, cosine 1, and MSE 0. |
+| `delta_mse`, `delta_relative_l2`, `delta_cosine` | The three latent distances from ADR-0012. |
+| `pixel_*` | Luma mean, standard deviation, blocking, ringing, spatial highpass energy, and mean absolute frame step of the encoded y4m. |
+
+`lcb probe fit` reads that CSV and writes an estimate table. Regression is MAE in CRF points. Classification is accuracy on the three rungs. Each row of the estimate table is one VAE, one codec, one task, and one of `latent`, `pixel`, or `chance`, with a 95% bootstrap interval over clips.
+
 `docs/results/artifact-propagation-summary.csv` is written by `scripts/summarize-artifact-propagation.py --write`. One row is one VAE, source codec, and CRF point, over the 34 clips. Columns ending in `_median`, `_q1`, `_q3` are the median and quartiles of the matching per-clip column. `clean_recon_psnr_median` is the clean-source `psnr_y` from `vae-recon.csv`. `additive_gap_db_median` is the measured `psnr_recon_clean` minus the PSNR two independent errors would give. `*_retention_pooled` is `sum(recon - clean) / sum(degraded - clean)` over the clips. `ringing_gap_median` is the median `ringing_degraded - ringing_clean`, which is negative when the codec softened edges. The figures `propagation-psnr.png`, `propagation-latent.png`, and `propagation-retention.png` come from the same script. ADR-0012.
