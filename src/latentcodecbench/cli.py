@@ -67,6 +67,21 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="CSV of per-clip overlap fractions. Pairs under 0.75 are flagged.",
     )
+    probe = sub.add_parser("probe", help="Linear probe of source CRF from latent features.")
+    probe_sub = probe.add_subparsers(dest="probe_command", required=True)
+    fit = probe_sub.add_parser(
+        "fit",
+        help="Fit the leave-clip-out probe and write the table, figure, and note.",
+    )
+    fit.add_argument("--features", type=Path, required=True, help="Probe feature CSV.")
+    fit.add_argument("--out", type=Path, required=True, help="Estimate table to write.")
+    fit.add_argument("--figure", type=Path, required=True, help="PNG path for the probe figure.")
+    fit.add_argument(
+        "--note",
+        type=Path,
+        default=None,
+        help="Learn note whose probe-results section is replaced.",
+    )
     reproduce = sub.add_parser(
         "reproduce",
         help="Check the published tables and figures against the committed CSVs.",
@@ -92,6 +107,8 @@ def main(argv: list[str] | None = None) -> int:
         return _baselines_run(args)
     if args.command == "plot" and args.plot_command == "rd":
         return _plot_rd(args)
+    if args.command == "probe" and args.probe_command == "fit":
+        return _probe_fit(args)
     if args.command == "reproduce":
         return _reproduce(args)
     parser.print_help()
@@ -136,6 +153,26 @@ def _baselines_run(args: argparse.Namespace) -> int:
         print(exc)
         return 1
     print(f"wrote {len(rows)} rows to {args.out}")
+    return 0
+
+
+def _probe_fit(args: argparse.Namespace) -> int:
+    from latentcodecbench.analysis.probe import ProbeError, read_probe
+    from latentcodecbench.analysis.probe_fit import write_probe_outputs
+
+    try:
+        report = write_probe_outputs(
+            read_probe(args.features),
+            table=args.out,
+            figure=args.figure,
+            note=args.note,
+        )
+    except (OSError, ProbeError, ValueError) as exc:
+        print(exc)
+        return 1
+    print(report, end="")
+    print(args.out)
+    print(args.figure)
     return 0
 
 

@@ -17,7 +17,7 @@ LatentCodecBench measures the variational autoencoders inside open video generat
 | 0. Foundation | Package, CI, docs | Done |
 | 1. Data and classic codecs | Clips, metrics, x264 / x265 / SVT-AV1 | Done |
 | 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Done |
-| 3. Codec leak | Source-codec artifacts in the latent | 3.1, 3.2, and 3.4 done; 3.3 is future work |
+| 3. Codec leak | Source-codec artifacts in the latent | 3.1, 3.2, and 3.4 done; 3.3 fit is in, results not measured |
 | 4. Post-filter | Lightweight decoder-side filter; design not chosen | Future work |
 | 5. Write-up | Report, figures, public release | Done |
 
@@ -27,7 +27,7 @@ The full step list is in [docs/PLAN.md](docs/PLAN.md). Design notes are in [docs
 
 Two items were left out of v1.0.0.
 
-- **3.3 Linear probe.** Predict the source QP or CRF from the latent, cross-validated, with confidence intervals. That would show whether the source quantizer is linearly readable, which is a stronger claim than the latent distance already measured. It needs a GPU.
+- **3.3 Linear probe.** The fit and the Colab feature driver are in ([ADR-0013](docs/decisions/0013-linear-probe.md), [note 14](docs/learn/14-linear-probe.md)). The feature CSV has not been measured. The probe asks whether source CRF, within one codec, is linearly readable from the latent, which is a stronger claim than the latent distance already measured. The sweep needs a GPU.
 - **Phase 4.** A lightweight decoder-side post-filter to recover quality. The design is still to be decided. It would show whether a cheap correction after the decoder can raise reconstruction quality.
 
 ## Published numbers

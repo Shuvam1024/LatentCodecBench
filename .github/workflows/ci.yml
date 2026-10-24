@@ -83,3 +83,15 @@ jobs:
           HF_HUB_DISABLE_TELEMETRY: "1"
           LATENTCODECBENCH_REQUIRE_VAE: "1"
         run: uv run pytest
+
+      - name: Build the wheel
+        if: matrix.python-version == '3.11'
+        run: uv build --wheel
+
+      - name: Upload the wheel
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: latentcodecbench-wheel
+          path: dist/*.whl
+          if-no-files-found: error
