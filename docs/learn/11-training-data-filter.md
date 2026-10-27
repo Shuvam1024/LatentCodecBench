@@ -71,7 +71,7 @@ The middle rung is where the pixel change turns down for Wan2.1, Hunyuan, and Wa
 
 It does not say a generator's samples get better. Nothing in the table was generated. The scores are reconstructions of the input.
 
-It does not say a linear probe can read the source CRF out of the latent. That is step 3.3, and it has not been run.
+It does not choose the cutoff from a linear probe. Note 14 fits that probe on the source rung. This note uses the pixel change and the latent distance.
 
 It does not set a threshold between two rungs. The three points are the ones that were measured. A cutoff inside a rung would be a new experiment.
 

@@ -17,7 +17,7 @@ LatentCodecBench measures the variational autoencoders inside open video generat
 | 0. Foundation | Package, CI, docs | Done |
 | 1. Data and classic codecs | Clips, metrics, x264 / x265 / SVT-AV1 | Done |
 | 2. Video VAEs | Wan, LTX-Video, HunyuanVideo as codecs | Done |
-| 3. Codec leak | Source-codec artifacts in the latent | 3.1, 3.2, and 3.4 done; 3.3 fit is in, results not measured |
+| 3. Codec leak | Source-codec artifacts in the latent, and a linear readout of the source rung | Done |
 | 4. Post-filter | Lightweight decoder-side filter; design not chosen | Future work |
 | 5. Write-up | Report, figures, public release | Done |
 
@@ -25,9 +25,8 @@ The full step list is in [docs/PLAN.md](docs/PLAN.md). Design notes are in [docs
 
 ## Future work
 
-Two items were left out of v1.0.0.
+Phase 4 was left out of v1.0.0, and it is still open.
 
-- **3.3 Linear probe.** The fit and the Colab feature driver are in ([ADR-0013](docs/decisions/0013-linear-probe.md), [note 14](docs/learn/14-linear-probe.md)). The feature CSV has not been measured. The probe asks whether source CRF, within one codec, is linearly readable from the latent, which is a stronger claim than the latent distance already measured. The sweep needs a GPU.
 - **Phase 4.** A lightweight decoder-side post-filter to recover quality. The design is still to be decided. It would show whether a cheap correction after the decoder can raise reconstruction quality.
 
 ## Published numbers
@@ -157,6 +156,10 @@ The table is [docs/results/artifact-propagation.csv](docs/results/artifact-propa
 - **Mild compression is free.** At x264/x265 CRF 18 and SVT-AV1 CRF 28 the reconstruction is within -0.03 to +0.23 dB of the clean-source reconstruction. The VAE's own error is larger than the codec's.
 - **Retention needs robust statistics.** Per-clip blocking retention reaches -1403 because the codec barely moved the score on some clips. Medians and IQRs are reported. The ringing score falls under compression on 87.7% of rows, so it reads as edge softening.
 - **x265 and SVT-AV1 did not reproduce their own files.** The degraded set was rebuilt between Colab sessions. x264 matched bit for bit; SVT-AV1 differed on 18 clips by up to 1.35 dB.
+
+The same latents support a linear readout of the source rung. The model is leave-clip-out ridge inside one codec, and the pooled number averages those clip scores across codecs. It does not fit one CRF across codecs. Pooled latent accuracy is 0.703 across the four VAEs (95% bootstrap interval [0.661, 0.743]), against chance 0.333 and a pixel baseline of 0.471 ([0.420, 0.520]). Per VAE the latent accuracies are 0.663 (Wan2.1, [0.611, 0.719]), 0.725 (Hunyuan, [0.657, 0.794]), 0.725 (LTX, [0.676, 0.775]), and 0.699 (Wan2.2, [0.641, 0.755]). The per-codec table and two easier-looking tasks, clean versus degraded and codec identity, are in [docs/learn/14-linear-probe.md](docs/learn/14-linear-probe.md). [ADR-0013](docs/decisions/0013-linear-probe.md).
+
+![Leave-clip-out probe of source CRF](docs/results/latent-probe.png)
 
 ![Reconstruction PSNR against the clean source](docs/results/propagation-psnr.png)
 
