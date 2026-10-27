@@ -44,3 +44,9 @@ Leave-clip-out spends one encode of the clean clip whenever a clip still has a m
 **A searched penalty.** An inner loop over clips would retune λ on every fold. λ = 1 on z-scored columns keeps the fit to one solve per fold and makes the number repeatable.
 
 **Decode the reconstruction and probe the pixels of the VAE output.** That asks whether the damage is visible after the decoder. This step asks whether it is readable in the latent. The pixel baseline is the source y4m, not the reconstruction.
+
+## Addendum, 2026-10-27
+
+The feature table is in the repository as `docs/results/latent-probe-features.csv.gz`. It is gzip of the Colab CSV. The uncompressed SHA256 is `c759c29aad3a04dedaad52b795524a96aee00a9d266c6365d6bfadb60f0ace0f`. 1360 rows, one config `bcc52c3cc55f5c45c7e45a0643a4e7dec6e4e6e7b533e55f4acf7e632f74d9ed`, git `5112c2552a5c7e198f38996399a6e496f135e7b4`, run `20261024T182512Z-5112c2552a5c-bcc52c3cc55f`. `source_crf` and `preset` are empty on the 136 clean rows only.
+
+`lcb probe fit` wrote `docs/results/latent-probe.csv` and `docs/results/latent-probe.png`, and filled the marked section of note 14. The per-codec fits are unchanged from this ADR. The note also pools classification accuracy across codecs by averaging clip scores, and it reports clean versus degraded and codec identity with the same ridge and the same split. Those two are readouts, not a change to the rung task. Pooling does not fit one model on a shared CRF.

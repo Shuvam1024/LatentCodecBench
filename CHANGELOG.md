@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Step 3.3 is measured. The feature table is `docs/results/latent-probe-features.csv.gz`, 1360 rows, uncompressed SHA256 `c759c29aad3a04dedaad52b795524a96aee00a9d266c6365d6bfadb60f0ace0f`. Leave-clip-out ridge reads the study rung from the latent. Pooled across codecs, accuracy is 0.703 (95% CI [0.661, 0.743]) against chance 0.333 and a pixel baseline of 0.471 (95% CI [0.420, 0.520]). Per-VAE latent accuracies are 0.663, 0.725, 0.725, and 0.699 for Wan2.1, Hunyuan, LTX, and Wan2.2. Note 14 and the report have the intervals and the caveats.
+- Phase 4 stays an open direction: a lightweight decoder-side post-filter to recover quality. The design is not chosen.
+
 ## 1.0.0 — 2026-10-23
 
 First public release of the benchmark. The Python package version stays 0.0.1; this tag is the repository release.

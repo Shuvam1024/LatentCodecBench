@@ -233,3 +233,13 @@ The distance in note 10 is not yet a readout. This change adds the probe that wo
 - Features are per-channel mean, standard deviation, and mean absolute value, padded to 128 channels, plus high-frequency energy, and the same block on the difference from the clean posterior mean. Six luma numbers are the pixel baseline. The clean clip is stored too. `source_sha256` is the y4m that was encoded.
 - The fit is leave-clip-out ridge, per VAE and per codec, with chance and the pixel baseline. Classification is ridge onto the three rung indicators. The interval is a 95% bootstrap over clips. `lcb probe fit` writes the table, the figure, and the marked section of `docs/learn/14-linear-probe.md`.
 - `notebooks/latent_probe_features.ipynb` encodes and does not decode. It reuses the clean tarball, the degrade step, and the Drive merge that refuses a shorter upload. 1360 rows once it finishes. The feature CSV is not in the repo, so 3.3 stays in Future work.
+
+## 2026-10-27 — Phase 3.3, measured probe
+
+The feature sweep finished. This change commits the table and the fit.
+
+- `docs/results/latent-probe-features.csv.gz` is gzip of the Colab CSV. Uncompressed SHA256 `c759c29aad3a04dedaad52b795524a96aee00a9d266c6365d6bfadb60f0ace0f`. 1360 rows, one config `bcc52c3cc55f5c45c7e45a0643a4e7dec6e4e6e7b533e55f4acf7e632f74d9ed`, git `5112c2552a5c7e198f38996399a6e496f135e7b4`, run `20261024T182512Z-5112c2552a5c-bcc52c3cc55f`. Empty `source_crf` and `preset` on the 136 clean rows only.
+- `lcb probe fit` wrote `docs/results/latent-probe.csv`, `docs/results/latent-probe.png`, and the marked section of note 14. Pooled across codecs, latent rung accuracy is 0.703 (95% CI [0.661, 0.743]), chance is 0.333, and the pixel baseline is 0.471 ([0.420, 0.520]). Per VAE the latent accuracies are Wan2.1 0.663, Hunyuan 0.725, LTX 0.725, Wan2.2 0.699.
+- Clean versus degraded has chance 0.900, because nine of ten rows are degraded. The pixel model ties that. LTX latent accuracy is 0.862, below that chance. The other three VAEs are above it.
+- Codec identity on the degraded rows is above chance and below the rung readout. `source_sha256` disagrees across VAEs on 75 of 306 degraded points (x265 36, SVT-AV1 39). x264 agrees.
+- 3.3 leaves Future work. Phase 4 stays an open direction: a lightweight decoder-side post-filter, design not chosen.

@@ -41,7 +41,7 @@ Wrappers: `AutoencoderKLWan` for Wan2.1 and for the Wan2.2 TI2V-5B VAE, `Autoenc
 ## Phase 3: Codec-leak study
 - 3.1 Degraded sources and the propagation metrics. Three CRF points from each Phase 1 ladder (x264, x265, SVT-AV1): latent distance, luma PSNR of the degraded reconstruction against the clean source and against the degraded source, and blocking/ringing retention. ADR-0012. `scripts/degrade-sources.py` writes the y4m files. `notebooks/artifact_propagation.ipynb` is the GPU driver. Measured rows land in step 3.2.
 - 3.2 Encode through each VAE; latent distance to clean latents, artifact reconstruction. Done: `docs/results/artifact-propagation.csv` (1224 rows), `scripts/summarize-artifact-propagation.py`, results in `docs/learn/10-artifact-propagation.md`.
-- 3.3 Linear probe of source CRF from latent statistics. The feature schema, the leave-clip-out fit, and the Colab driver are in. ADR-0013. `notebooks/latent_probe_features.ipynb` encodes each source and writes the feature CSV. `lcb probe fit` writes the table, the figure, and `docs/learn/14-linear-probe.md`. The feature CSV has not been measured, so the result stays in Future work.
+- 3.3 Linear probe of source CRF from latent statistics. Done. `docs/results/latent-probe-features.csv.gz` is the 1360-row feature table. `lcb probe fit` writes `docs/results/latent-probe.csv`, `docs/results/latent-probe.png`, and `docs/learn/14-linear-probe.md`. Pooled across codecs, latent rung accuracy is 0.703 (95% CI [0.661, 0.743]), against chance 0.333 and a pixel baseline of 0.471. ADR-0013.
 - 3.4 Write-up: implications for training-data filtering. Done: `docs/learn/11-training-data-filter.md` reads the per-clip PSNR change against the clean reconstruction, with the latent shift beside it. `scripts/summarize-filtering.py` reprints that section, and a test checks the note against the CSVs.
 
 ## Phase 5: Write-up and release
@@ -51,5 +51,4 @@ Wrappers: `AutoencoderKLWan` for Wan2.1 and for the Wan2.2 TI2V-5B VAE, `Autoenc
 
 ## Future work
 
-- **3.3 Linear probe.** The fitting code and the encode-only Colab driver are in. The feature CSV has not been measured, so there is no result yet. The probe asks whether source CRF, within one codec, is linearly readable from the latent. That is a stronger claim than the latent having moved. The sweep needs a GPU.
 - **Phase 4, decoder-side post-filter.** A lightweight filter after the decoder, to recover quality. The design is still to be decided. It has not been run. It would show whether a cheap correction after decoding can raise the reconstruction the VAE already measured.

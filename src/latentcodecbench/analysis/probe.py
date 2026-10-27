@@ -15,6 +15,7 @@ with the right geometry is kept. ADR-0013.
 from __future__ import annotations
 
 import csv
+import gzip
 import hashlib
 import json
 import os
@@ -23,7 +24,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import IO, Protocol
 
 import numpy as np
 import numpy.typing as npt
@@ -255,10 +256,14 @@ def write_probe(path: Path, rows: list[ProbeRow]) -> None:
 
 
 def read_probe(path: Path) -> list[ProbeRow]:
-    """Load a probe-feature CSV. An empty file yields an empty list."""
+    """Load a probe-feature CSV. An empty file yields an empty list.
+
+    A path ending in ``.gz`` is gzip of that same CSV. The recorded
+    checksum is of the uncompressed bytes.
+    """
     if not path.is_file():
         return []
-    with path.open(encoding="utf-8", newline="") as handle:
+    with _open_probe(path) as handle:
         reader = csv.DictReader(handle)
         if reader.fieldnames is None:
             return []
@@ -404,6 +409,13 @@ def _index(rows: list[ProbeRow]) -> dict[tuple[str, str, str, int | None], Probe
             raise ProbeError(f"duplicate row {key}")
         found[key] = row
     return found
+
+
+def _open_probe(path: Path) -> IO[str]:
+    """Text handle for a plain CSV or gzip of one."""
+    if path.suffix == ".gz":
+        return gzip.open(path, "rt", encoding="utf-8", newline="")
+    return path.open(encoding="utf-8", newline="")
 
 
 def _to_dict(row: ProbeRow) -> dict[str, str]:
